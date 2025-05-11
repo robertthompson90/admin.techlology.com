@@ -1,5 +1,3 @@
-// js/undoRedo.js
-
 var UndoRedo = (function(){
   var undoStack = [];
   var redoStack = [];
@@ -7,13 +5,11 @@ var UndoRedo = (function(){
   // Save the current order state of the staging area.
   function saveState() {
     var state = $("#staging-media").sortable("toArray", { attribute: "data-media-id" });
-    // Push a clone of the state so that future DOM changes will not affect it.
     undoStack.push(JSON.parse(JSON.stringify(state)));
-    // Clear the redo stack on any new action.
     redoStack = [];
   }
 
-  // Apply a saved state: reorder the items in the staging area.
+  // Apply a saved state by reordering staging items.
   function applyState(state) {
     var $staging = $("#staging-media");
     state.forEach(function(mediaId){
@@ -23,7 +19,7 @@ var UndoRedo = (function(){
   }
 
   function undo() {
-    if (undoStack.length > 1) { // leave at least one state
+    if (undoStack.length > 1) {
       var current = undoStack.pop();
       redoStack.push(current);
       var prev = undoStack[undoStack.length - 1];
