@@ -552,54 +552,74 @@ input[type="submit"]:hover {
 /* =====================================================
    CROPPER MODAL & ACTION BUTTONS
 ===================================================== */
+/* Full Screen Modal for Advanced Image Editor */
 #cropper-modal {
   display: none;
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.7) !important;
-  z-index: 9999;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  opacity: 1 !important;
-}
-#cropper-area {
-  width: 80vw;
-  height: 80vh;
-  background: #1f222b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-#cropper-area img {
   width: 100%;
-
   height: 100%;
-  object-fit: contain;
+  background: rgba(0, 0, 0, 0.85); /* Dims background with proper opacity */
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 20px;
 }
-#cropper-controls {
-  margin-top: 20px;
-  width: 80vw;
-  color: #fff;
+
+/* Container for the cropping area within the modal */
+#cropper-area {
+  position: relative;
+  background: #fff;
+  margin: auto;
+  max-width: 1200px;
+  width: 90%;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+/* The image to be edited */
+#cropper-image {
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Live Preview Styling */
+#cropper-live-preview {
+  margin-top: 15px;
   text-align: center;
 }
-.action-buttons button {
-  background: #2a2e3a;
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  margin: 5px;
-  border-radius: 4px;
+
+/* Controls section */
+#cropper-controls {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.slider-group {
+  margin: 10px 0;
+}
+
+.slider-group label {
+  display: inline-block;
+  min-width: 75px;
+  color: #444;
+}
+
+.slider-group input[type="range"] {
+  width: 200px;
+  vertical-align: middle;
+}
+
+/* Buttons */
+#cropper-save-new-image,
+#cropper-cancel-button {
+  margin: 10px 5px;
+  padding: 8px 16px;
+  font-size: 1em;
   cursor: pointer;
-  transition: background 0.3s;
 }
-.action-buttons button:hover {
-  background: #333;
-}
+
 
 /* =====================================================
    PART 5: ADVANCED CROPPER MODAL & PREVIEW MODAL
@@ -695,4 +715,183 @@ input[type="submit"]:hover {
     width: 100%;
     height: auto;
   }
+	 #cropper-area {
+    width: 95%;
+    padding: 10px;
+  }
+  .slider-group input[type="range"] {
+    width: 150px;
+  }
+}
+
+
+/* Override default Cropper overlays to ensure full opacity */
+.cropper-view-box,
+.cropper-face,
+.cropper-crop-box {
+  opacity: 1 !important;
+}
+
+
+/* Full-screen Advanced Image Editor */
+#cropper-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85); /* proper dimming */
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+#cropper-area {
+  position: relative;
+  margin: auto;
+  max-width: 1200px;
+  width: 90%;
+  background: #fff;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+#cropper-image {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Ensure sliders and preview area are spaced out properly */
+#cropper-controls, #cropper-live-preview {
+  margin-top: 15px;
+  text-align: center;
+}
+
+
+.cropper-modal {
+    opacity: 1 !important;
+    background-color: rgba(0, 0, 0, 0.85) !important; /* if you want a dimming effect */
+}
+
+
+/* Override Cropper’s default opacity settings */
+.cropper-modal,
+.cropper-modal * {
+  opacity: 1 !important;
+}
+
+/* Full-screen modal container override */
+#cropper-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85) !important; /* Dark overlay with proper dimming */
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Container for the cropping interface */
+#cropper-area {
+  background: #fff;
+  margin: auto;
+  max-width: 1200px;
+  width: 90%;
+  padding: 15px;
+  border-radius: 4px;
+  position: relative;
+}
+
+/* Image styling within the cropping area */
+#cropper-image {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Styling for the controls and live preview */
+#cropper-controls, #cropper-live-preview {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.slider-group {
+  margin: 10px 0;
+}
+
+.slider-group label {
+  display: inline-block;
+  min-width: 75px;
+  color: #444;
+}
+
+.slider-group input[type="range"] {
+  width: 200px;
+  vertical-align: middle;
+}
+
+
+/* Override any Cropper defaults affecting opacity */
+.cropper-modal,
+.cropper-modal * {
+  opacity: 1 !important;
+}
+
+/* Full-screen advanced editor modal */
+#cropper-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Main cropping container */
+#cropper-area {
+  background: #fff;
+  margin: auto;
+  max-width: 1200px;
+  width: 90%;
+  padding: 15px;
+  border-radius: 4px;
+  position: relative;
+}
+
+/* Ensure the image is centered and contained */
+#cropper-image {
+  display: block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+/* Controls and live preview styling */
+#cropper-controls,
+#cropper-live-preview {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.slider-group {
+  margin: 10px 0;
+}
+
+.slider-group label {
+  display: inline-block;
+  min-width: 75px;
+  color: #444;
+}
+
+.slider-group input[type="range"] {
+  width: 200px;
+  vertical-align: middle;
 }

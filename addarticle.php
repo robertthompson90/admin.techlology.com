@@ -158,21 +158,22 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
     <h2 id="cropper-modal-title" class="visually-hidden">Advanced Image Editor</h2>
     <div class="advanced-controls">
       <div class="slider-group">
-        <label for="brightness-slider">Brightness</label>
-        <input type="range" id="brightness-slider" min="50" max="150" value="100">
-      </div>
-      <div class="slider-group">
-        <label for="contrast-slider">Contrast</label>
-        <input type="range" id="contrast-slider" min="50" max="150" value="100">
-      </div>
-      <div class="slider-group">
-        <label for="saturation-slider">Saturation</label>
-        <input type="range" id="saturation-slider" min="50" max="150" value="100">
-      </div>
-      <div class="slider-group">
-        <label for="hue-slider">Hue</label>
-        <input type="range" id="hue-slider" min="0" max="360" value="0">
-      </div>
+				<label for="brightness-slider">Brightness</label>
+				<!-- Here 100 is neutral for brightness -->
+				<input type="range" id="brightness-slider" min="50" max="150" value="100">
+			</div>
+			<div class="slider-group">
+				<label for="contrast-slider">Contrast</label>
+				<input type="range" id="contrast-slider" min="50" max="150" value="100">
+			</div>
+			<div class="slider-group">
+				<label for="saturation-slider">Saturation</label>
+				<input type="range" id="saturation-slider" min="50" max="150" value="100">
+			</div>
+			<div class="slider-group">
+				<label for="hue-slider">Hue</label>
+				<input type="range" id="hue-slider" min="0" max="360" value="0">
+			</div>
     </div>
     <div class="action-buttons">
       <button type="button" id="cropper-crop-button">Crop</button>
@@ -197,6 +198,8 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" crossorigin="anonymous"></script>
+
 <!-- Script Inclusions -->
 <script src="js/sections.js"></script>
 <script src="js/imageEditor.js"></script>
@@ -215,9 +218,6 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 <script src="js/formTabs.js"></script>
 <script src="js/globalErrorHandler.js"></script>
 <script src="js/mediaUpload.js"></script>
-<script src="js/pluginManager.js"></script>
-<script src="js/samplePlugin.js"></script>
-<script src="js/roleBasedUI.js"></script>
 <script src="js/undoRedo.js"></script>
 <script src="js/stagingArea.js"></script>
 <script src="js/app.js"></script>
