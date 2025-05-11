@@ -895,3 +895,400 @@ input[type="submit"]:hover {
   width: 200px;
   vertical-align: middle;
 }
+
+
+/* ========================================================================
+   Advanced Image Editor Modal & Overrides
+   ======================================================================== */
+
+/* Full-screen modal container */
+#cropper-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85); /* Dark overlay */
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Main cropping area container */
+#cropper-area {
+  margin: 0 auto;
+  max-width: 1200px;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+/* The original image element (Cropper.js will clone it) */
+#cropper-image {
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Ensure any Cropper.js generated container stays within bounds */
+.cropper-container {
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+/* Controls container for advanced editor */
+.cropper-controls {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #333;
+  color: #fff;
+  border-radius: 0 0 4px 4px;
+}
+
+/* Visually hidden headline for accessibility */
+.cropper-controls h2.visually-hidden {
+  position: absolute;
+  clip: rect(0 0 0 0);
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+}
+
+/* Container for slider controls */
+.advanced-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+/* Slider group styling */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 5px;
+}
+.slider-group label {
+  margin-bottom: 5px;
+  color: #fff;
+  font-size: 14px;
+}
+.slider-group input[type="range"] {
+  width: 200px;
+}
+
+/* Action buttons styling */
+.action-buttons {
+  text-align: center;
+  margin: 10px 0;
+}
+.action-buttons button {
+  background-color: #007bff;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  margin: 0 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s ease;
+}
+.action-buttons button:hover {
+  background-color: #0056b3;
+}
+
+/* Live preview area styling */
+.live-preview-wrapper {
+  background-color: #222;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 20px;
+  text-align: center;
+}
+.live-preview h3 {
+  color: #fff;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+/* ------------------------------------------------------------------------
+   Override Cropper.js default opacity (force full opacity)
+   ------------------------------------------------------------------------ */
+.cropper-modal,
+.cropper-modal * {
+  opacity: 1 !important;
+}
+
+
+/* --- Advanced Image Editor Overrides --- */
+
+/* Full-screen modal container */
+#cropper-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.85); /* Dark overlay */
+  z-index: 10000;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+/* Main cropping area container */
+#cropper-area {
+  margin: 0 auto;
+  max-width: 1200px;
+  width: 90%;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 4px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Ensure the original image is shown (Cropper.js clones it for interaction) */
+#cropper-image {
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Override Cropper-generated elements */
+.cropper-container {
+  margin: 0 auto;
+  max-width: 100%;
+}
+
+/* Style the cropping box */
+.cropper-crop-box {
+  border: 2px dashed #fff !important;
+  background: transparent !important;
+  /* Remove any unwanted box-shadows */
+  box-shadow: none !important;
+}
+
+/* Additionally, if necessary, adjust the view box */
+.cropper-view-box {
+  border: none !important;
+}
+
+/* Optional: style the drag box if visible */
+.cropper-drag-box {
+  border: 2px solid rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Controls container for the advanced editor: */
+.cropper-controls {
+  margin-top: 20px;
+  padding: 10px;
+  background-color: #333;
+  color: #fff;
+  border-radius: 0 0 4px 4px;
+}
+
+/* Container for slider controls */
+.advanced-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+/* Slider group styling */
+.slider-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 5px;
+}
+.slider-group label {
+  margin-bottom: 5px;
+  color: #fff;
+  font-size: 14px;
+}
+.slider-group input[type="range"] {
+  width: 200px;
+}
+
+/* Action buttons styling */
+.action-buttons {
+  text-align: center;
+  margin: 10px 0;
+}
+.action-buttons button {
+  background-color: #007bff;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  margin: 0 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s ease;
+}
+.action-buttons button:hover {
+  background-color: #0056b3;
+}
+
+/* Live preview area styling */
+.live-preview-wrapper {
+  background-color: #222;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 20px;
+  text-align: center;
+}
+.live-preview h3 {
+  color: #fff;
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+/* ------------------------------------------------------------------------
+   Override Cropper.js defaults (force full opacity, etc.)
+   ------------------------------------------------------------------------ */
+.cropper-modal,
+.cropper-modal * {
+  opacity: 1 !important;
+}
+
+
+/* =========================================================================
+   Integrated Advanced Image Editor CSS
+   ========================================================================= */
+
+/* Full-screen modal container with our desired background and no flicker */
+#cropper-modal {
+  display: none !important;
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  z-index: 10000 !important;
+  overflow-y: auto !important;
+  padding: 20px !important;
+}
+
+/* Centered cropping area container */
+#cropper-area {
+  margin: 0 auto !important;
+  max-width: 1200px !important;
+  width: 90% !important;
+  background-color: #fff !important;
+  padding: 20px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 0 20px rgba(0,0,0,0.4) !important;
+}
+
+/* Original image styling – even though Cropper clones it, keep the original clean */
+#cropper-image {
+  max-width: 100% !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
+/* Force Cropper-generated elements to follow our style rules */
+.cropper-container,
+.cropper-wrap-box,
+.cropper-canvas,
+.cropper-crop-box,
+.cropper-view-box,
+.cropper-drag-box {
+  background: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Styling for the cropping box itself */
+.cropper-crop-box {
+  border: 2px dashed #fff !important;
+  background: transparent !important;
+}
+
+/* Remove extra borders or shadows on view boxes and drag boxes */
+.cropper-view-box,
+.cropper-drag-box {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* Advanced editor controls container */
+.cropper-controls {
+  margin-top: 20px !important;
+  padding: 10px !important;
+  background-color: #333 !important;
+  color: #fff !important;
+  border-radius: 0 0 4px 4px !important;
+}
+
+/* Layout for slider controls */
+.advanced-controls {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  gap: 20px !important;
+  padding: 10px 0 !important;
+}
+.slider-group {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  margin: 5px;
+}
+.slider-group label {
+  margin-bottom: 5px !important;
+  color: #fff !important;
+  font-size: 14px !important;
+}
+.slider-group input[type="range"] {
+  width: 200px !important;
+}
+
+/* Styling for action buttons */
+.action-buttons {
+  text-align: center !important;
+  margin: 10px 0 !important;
+}
+.action-buttons button {
+  background-color: #007bff !important;
+  color: #fff !important;
+  padding: 10px 20px !important;
+  border: none !important;
+  border-radius: 4px !important;
+  margin: 0 10px !important;
+  cursor: pointer !important;
+  font-size: 16px !important;
+  transition: background-color 0.2s ease !important;
+}
+.action-buttons button:hover {
+  background-color: #0056b3 !important;
+}
+
+/* Live preview area styling */
+.live-preview-wrapper {
+  background-color: #222 !important;
+  padding: 10px !important;
+  border-radius: 4px !important;
+  margin-top: 20px !important;
+  text-align: center !important;
+}
+.live-preview h3 {
+  color: #fff !important;
+  margin-bottom: 10px !important;
+  font-size: 18px !important;
+}
+
+/* Guarantee full opacity for our UI elements */
+.cropper-modal,
+.cropper-modal * {
+  opacity: 1 !important;
+}
