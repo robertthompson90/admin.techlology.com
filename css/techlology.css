@@ -21,7 +21,7 @@ body {
 ===================================================== */
 .layout {
   display: grid;
-  grid-template-columns: 220px 1fr 380px;
+  grid-template-columns: 220px 1fr minmax(550px, 2fr);
   height: 100vh;
   overflow: hidden;
   font-family: 'Helvetica Neue', Arial, sans-serif;
