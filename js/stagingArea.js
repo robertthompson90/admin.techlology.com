@@ -1,9 +1,12 @@
 // js/stagingArea.js
+
 var StagingArea = (function(){
   
-  // Integrated function: adds a new media item to the staging area.
+  // Adds a new media item to the staging area.
+  // newImageData: the data URL for the image.
+  // mediaId: an identifier for the media item.
   function addMediaToStaging(newImageData, mediaId) {
-    // Create a polaroid element with an image and a caption.
+    // Create the polaroid container with a data attribute for media id.
     var $polaroid = $("<div>")
                       .addClass("polaroid")
                       .attr("data-media-id", mediaId);
@@ -15,26 +18,25 @@ var StagingArea = (function(){
                       .text("Double-click to edit caption");
     $polaroid.append($img).append($caption);
     
-    // Append the new polaroid to the staging area.
+    // Append the new media to the staging area.
     $("#staging-media").append($polaroid);
     
     // Update the undo/redo state.
     UndoRedo.saveState();
   }
   
-  // Initializes the staging area behavior.
+  // Initializes the staging area – sortable drag/drop, inline caption editing, deletion safeguards.
   function init() {
     // Make the staging area sortable.
     $("#staging-media").sortable({
       placeholder: "staging-placeholder",
       tolerance: "pointer",
       update: function(){
-        // Save the new order state.
+        // Save the new order after sorting.
         UndoRedo.saveState();
         Notifications.show("Staging order updated", "info");
       }
     });
-    // Save the initial state.
     UndoRedo.saveState();
     
     // Enable inline caption editing on double-click.
@@ -48,31 +50,29 @@ var StagingArea = (function(){
       $(this)
         .removeAttr("contenteditable")
         .removeClass("editing");
-      // Optionally, send an AJAX request here to persist the caption.
       Notifications.show("Caption updated", "info");
     });
     
-    // Add a delete button on hover for each polaroid.
+    // Add a delete button when hovering over a polaroid.
     $("#staging-media").on("mouseenter", ".polaroid", function(){
       if ($(this).find(".delete-btn").length === 0) {
-        $("<button class='delete-btn' title='Remove this media'>×</button>")
-          .appendTo($(this))
-          .on("click", function(e){
-            e.stopPropagation();
-            var $item = $(this).closest(".polaroid");
-            if (confirm("Are you sure you want to remove this media item?")) {
-              $item.fadeOut(200, function(){
-                $(this).remove();
-                UndoRedo.saveState();
-                Notifications.show("Media item removed from staging", "info");
-              });
-            }
-          });
+         $("<button class='delete-btn' title='Remove this media'>×</button>")
+             .appendTo($(this))
+             .on("click", function(e){
+                e.stopPropagation();
+                var $item = $(this).closest(".polaroid");
+                if (confirm("Are you sure you want to remove this media item?")) {
+                    $item.fadeOut(200, function(){
+                        $(this).remove();
+                        UndoRedo.saveState();
+                        Notifications.show("Media item removed from staging", "info");
+                    });
+                }
+             });
       }
     });
   }
   
-  // Return public methods.
   return {
     init: init,
     addMediaToStaging: addMediaToStaging

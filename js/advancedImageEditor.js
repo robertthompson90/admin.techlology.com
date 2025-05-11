@@ -1,4 +1,5 @@
 // js/advancedImageEditor.js
+
 var AdvancedImageEditor = (function(){
   var cropper = null;
   var $modal = $("#cropper-modal");
@@ -9,8 +10,9 @@ var AdvancedImageEditor = (function(){
     saturation: 100,
     hue: 0
   };
-  
-  // Opens the editor with an image URL. Optionally pass a callback to retrieve the final image.
+
+  // Opens the full-screen editor with an image URL.
+  // The callback receives two parameters: the new image data URL and a generated mediaId.
   function openEditor(imageUrl, callback, mode) {
     $modal.fadeIn(300);
     $image.attr("src", imageUrl);
@@ -32,13 +34,20 @@ var AdvancedImageEditor = (function(){
     
     // When "Save New Image" is clicked.
     $("#cropper-save-new-image").off("click").on("click", function(){
-      if(!cropper) return;
+      if (!cropper) return;
       var baseCanvas = cropper.getCroppedCanvas();
       var filteredCanvas = applyFiltersToCanvas(baseCanvas, filterSettings);
       var newImageData = filteredCanvas.toDataURL();
-      if(typeof callback === "function"){
-        callback(newImageData);
+      
+      // Simulate media ID generation. In a real system this might come from your server.
+      var generatedMediaId = "media_" + new Date().getTime();
+      
+      // Call the callback with new image data URL and mediaId.
+      if (typeof callback === "function") {
+        callback(newImageData, generatedMediaId);
       }
+      
+      // Optionally, send the new image to the server for duplicate detection, multiple size generation, etc.
       saveNewImage(newImageData);
       closeEditor();
     });
@@ -49,7 +58,7 @@ var AdvancedImageEditor = (function(){
   }
   
   function closeEditor() {
-    if(cropper) {
+    if (cropper) {
       cropper.destroy();
       cropper = null;
     }
@@ -59,7 +68,7 @@ var AdvancedImageEditor = (function(){
   }
   
   function updateLivePreview() {
-    if(!cropper) return;
+    if (!cropper) return;
     var previewCanvas = cropper.getCroppedCanvas();
     var filteredCanvas = applyFiltersToCanvas(previewCanvas, filterSettings);
     $("#cropper-live-preview").empty().append(filteredCanvas);
@@ -94,7 +103,7 @@ var AdvancedImageEditor = (function(){
     return newCanvas;
   }
   
-  // Saves the final image via AJAX (endpoint handles duplicate detection and multiple sizes).
+  // Sends the new image data to the server (endpoint handles duplicate detection and size generation).
   function saveNewImage(dataUrl) {
     $.ajax({
       url: "ajax/saveNewImage.php",
@@ -102,9 +111,9 @@ var AdvancedImageEditor = (function(){
       data: { image: dataUrl },
       dataType: "json",
       success: function(response) {
-        if(response.success) {
+        if (response.success) {
           Notifications.show("New image saved successfully", "success");
-          MediaLibrary.loadMedia(); // Refresh library.
+          MediaLibrary.loadMedia(); // Refresh the media library.
         } else {
           Notifications.show("Error: " + response.error, "error");
         }
@@ -114,10 +123,10 @@ var AdvancedImageEditor = (function(){
       }
     });
   }
-  
+
   return {
     openEditor: openEditor,
     closeEditor: closeEditor,
-    init: function(){ /* Additional init if needed */ }
+    init: function(){ /* Additional initialization if needed */ }
   };
 })();

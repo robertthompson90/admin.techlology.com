@@ -14,29 +14,29 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Main Merged Stylesheet -->
   <link href="css/techlology.css?v=<?php echo filemtime('css/techlology.css'); ?>" rel="stylesheet" type="text/css">
-
-  <!-- jQuery & jQuery UI for autocomplete and sortable interactions -->
+  
+  <!-- jQuery & jQuery UI for interactions -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
   <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/smoothness/jquery-ui.css">
   
-  <!-- Optional: Cropper.js default CSS (if desired) -->
+  <!-- Cropper.js default CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" crossorigin="anonymous" />
 </head>
 <body>
 <div class="layout">
-  <!-- Sidebar Navigation (existing) -->
+  <!-- Sidebar Navigation -->
   <div class="sidebar">
     <?php include 'inc/nav.php'; ?>
   </div>
   
-  <!-- Main Content -->
+  <!-- Main Content: Article Form -->
   <div class="main">
     <h1>Add New Article</h1>
-    <!-- Autosave Status -->
+    <!-- Autosave Status Indicator -->
     <div id="autosave-status" style="margin-bottom:10px; font-style:italic; color:#aaa;">Autosave status...</div>
     
-    <!-- Segmented Form -->
+    <!-- Segmented Article Form -->
     <form action="addarticlepost.php" method="post" enctype="multipart/form-data" id="article-form">
       
       <!-- Step 1: Fixed Information & Tags -->
@@ -63,14 +63,13 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
         <div class="nav-buttons">
           <button type="button" class="next-step">Next &raquo;</button>
         </div>
-				<div class="card">
-					<h2>SEO &amp; Metadata</h2>
-					<label for="seo_title">SEO Title:</label>
-					<input type="text" name="seo_title" id="seo_title" placeholder="Enter SEO title">
-					<label for="meta_description">Meta Description:</label>
-					<textarea name="meta_description" id="meta_description" rows="3" placeholder="Enter meta description"></textarea>
-				</div>
-
+        <div class="card">
+          <h2>SEO &amp; Metadata</h2>
+          <label for="seo_title">SEO Title:</label>
+          <input type="text" name="seo_title" id="seo_title" placeholder="Enter SEO title">
+          <label for="meta_description">Meta Description:</label>
+          <textarea name="meta_description" id="meta_description" rows="3" placeholder="Enter meta description"></textarea>
+        </div>
       </div>
       
       <!-- Step 2: Modular Content Sections -->
@@ -131,18 +130,20 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
     </form>
   </div>
   
-  <!-- Global Media Library and Staging Area Panel -->
+  <!-- Media Panels: Staging Area and Global Media Library -->
   <div class="media-panels">
     <div id="staging-area">
       <h3>Staging Area</h3>
       <div id="staging-media">
-        <!-- Your JS can load media assets here that are used in this article -->
+        <!-- Staging media items will be added here by JS -->
       </div>
+      <!-- Example Trigger: Replace or remove in production -->
+      <button type="button" id="some-open-editor-button">Open Advanced Editor</button>
     </div>
     <div id="global-media-library">
       <h3>Global Media Library</h3>
       <div id="global-media">
-        <!-- Your JS can load all global media assets along with tag filters -->
+        <!-- Global media items will be loaded here by JS -->
       </div>
     </div>
   </div>
@@ -189,7 +190,8 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <!-- Preview Modal for Live Article Preview -->
-<div id="preview-modal" class="preview-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
+<div id="preview-modal" class="preview-modal" style="display: none;" role="dialog" aria-modal="true"
+     aria-labelledby="preview-modal-title">
   <div class="preview-modal-content">
     <button type="button" id="preview-close" class="preview-close" aria-label="Close Preview">&times;</button>
     <h2 id="preview-modal-title" class="visually-hidden">Article Preview</h2>
@@ -197,10 +199,7 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   </div>
 </div>
 
-<!-- Cropper.js Script -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" crossorigin="anonymous"></script>
-
-<!-- Custom Script Modules – Ensure proper load order -->
+<!-- Script Inclusions -->
 <script src="js/sections.js"></script>
 <script src="js/imageEditor.js"></script>
 <script src="js/advancedImageEditor.js"></script>
