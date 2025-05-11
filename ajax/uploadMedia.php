@@ -4,13 +4,31 @@
 header('Content-Type: application/json');
 include '../inc/loginanddb.php'; // Adjust the path if required
 
-// Check if a media file is uploaded
+// Check if a media file is uploaded successfully.
 if (!isset($_FILES['media_file']) || $_FILES['media_file']['error'] !== UPLOAD_ERR_OK) {
     echo json_encode(['error' => 'Media file upload failed.']);
     exit;
 }
 
-$uploadDir = '../uploads/media/';  // Folder relative to this endpoint
+$fileSize = $_FILES['media_file']['size'];
+$fileHash = isset($_POST['file_hash']) ? trim($_POST['file_hash']) : '';
+
+// **Check for an existing file_hash before proceeding**
+$stmt = $db->prepare("SELECT id, file_path FROM media_assets WHERE TRIM(file_hash)= ?");
+$stmt->execute([$fileHash]);
+$existingMedia = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($existingMedia) {
+    echo json_encode([
+        'error' => 'Duplicate detected',
+        'duplicate' => true,
+        'existing_media' => $existingMedia
+    ]);
+    exit;
+}
+
+// Proceed with the upload only if no duplicate was found.
+$uploadDir = '../uploads/media/';  
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);
 }
@@ -25,22 +43,20 @@ if (!move_uploaded_file($_FILES['media_file']['tmp_name'], $targetFile)) {
     exit;
 }
 
-// Get file size and construct the relative path for the DB record.
-$fileSize = $_FILES['media_file']['size'];
-$filePath = 'uploads/media/' . $newFilename;  // This path is relative to your site root
+$filePath = 'uploads/media/' . $newFilename;
+// Insert the new media file record into the DB using the full hash.
+$stmt = $db->prepare("INSERT INTO media_assets (file_path, file_size, file_hash, default_crop, filter_state, caption, alt_text, attribution, created_at, updated_at)
+                      VALUES (?, ?, ?, '', '', '', '', '', NOW(), NOW())");
 
-// Insert into media_assets table. The schema has: id, file_path, file_size, default_crop, filter_state, caption, alt_text, attribution, created_at, updated_at.
-$stmt = $db->prepare("INSERT INTO media_assets (file_path, file_size, default_crop, filter_state, caption, alt_text, attribution, created_at, updated_at) VALUES (?, ?, '', '', '', '', '', NOW(), NOW())");
-if ($stmt->execute([$filePath, $fileSize])) {
-    // Return the newly created media asset details.
+if ($stmt->execute([$filePath, $fileSize, $fileHash])) {
     $mediaId = $db->lastInsertId();
     echo json_encode([
         'success' => true,
         'media' => [
-            'id'   => $mediaId,
+            'id'        => $mediaId,
             'file_path' => $filePath,
-            'caption' => '',
-            'title' => ''   // Title can be updated later if desired.
+            'caption'   => '',
+            'title'     => ''
         ]
     ]);
 } else {
