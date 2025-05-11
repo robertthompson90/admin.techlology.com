@@ -221,7 +221,9 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 <script src="js/pluginManager.js"></script>
 <script src="js/samplePlugin.js"></script>
 <script src="js/roleBasedUI.js"></script>
+<script src="js/undoRedo.js"></script>
 <script src="js/stagingArea.js"></script>
 <script src="js/app.js"></script>
+
 </body>
 </html>
