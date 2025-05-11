@@ -221,5 +221,24 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 <script src="js/undoRedo.js"></script>
 <script src="js/stagingArea.js"></script>
 <script src="js/app.js"></script>
+<script>
+// Attach a handler for double-click on media items in the media library.
+$(document).on("dblclick", ".global-media-item", function(){
+  // Extract the image URL from the child <img> element.
+  var imageUrl = $(this).find("img").attr("src");
+  
+  // Log for debugging purposes.
+  console.log("Double-click detected on global media item, image URL:", imageUrl);
+  
+  // Check that a URL was found.
+  if (imageUrl) {
+    AdvancedImageEditor.openEditor(imageUrl, function(){
+      console.log("Advanced Image Editor opened successfully for:", imageUrl);
+    });
+  } else {
+    console.warn("No image URL found for this media item.");
+  }
+});
+</script>
 </body>
 </html>
