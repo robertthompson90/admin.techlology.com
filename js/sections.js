@@ -31,7 +31,7 @@ var Sections = (function(){
     // type can be "thumbnail", "single", or "gallery" - adjust as needed.
     var html = '<div class="polaroid">';
     html += '<div class="polaroid-image">';
-    if(imageSrc) {
+    if (imageSrc) {
       html += '<img src="' + imageSrc + '" alt="Uploaded Photo">';
     }
     html += '</div>';
@@ -137,6 +137,8 @@ var Sections = (function(){
             $("#section-type-selector-top option[value='" + RATING_SECTION + "']").prop("disabled", false);
             $("#section-type-selector-bottom option[value='" + RATING_SECTION + "']").prop("disabled", false);
          }
+         // Trigger custom event for section removal (if needed by other modules)
+         $(document).trigger("section:removed", [removedSectionType]);
     });
     
     // If it's a rating section, disable the rating option in the selectors.
@@ -159,6 +161,11 @@ var Sections = (function(){
     }
     
     toggleBottomSectionSelector();
+
+    // *** New Integration Point ***
+    // Trigger a custom event so that additional functionality (e.g., re-binding dropzones, autosave modules, image editors) 
+    // can initialize on this newly added section.
+    $(document).trigger("section:added", [sectionDiv]);
   }
   
   // Initialize the section builder: bind changes on both selectors and apply sortable behavior.

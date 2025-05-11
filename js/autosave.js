@@ -1,49 +1,84 @@
 // js/autosave.js
-
 var Autosave = (function(){
-  // Autosave interval in milliseconds (30 seconds)
-  var interval = 30000;
+  var autosaveInterval = 30000; // every 30 seconds
+  var debounceDelay = 3000;      // 3 seconds debounce delay
+  var autosaveTimer;
   var isSaving = false;
   
-  /**
-   * Automatically saves the form data.
-   * Note: The URL in this AJAX request is relative to the HTML document's location
-   * (i.e. addarticle.php), not the location of this JavaScript file.
-   * Since addarticle.php is in the root, 'ajax/autosave.php' correctly points to the ajax folder.
-   */
-  function autoSave() {
-    // Skip if a save operation is in progress.
+  // Save the current form data to localStorage.
+  function saveDraftLocally() {
+    var formData = $("#article-form").serializeArray();
+    localStorage.setItem("articleDraft", JSON.stringify(formData));
+    $("#autosave-status").text("Draft saved locally at " + new Date().toLocaleTimeString());
+  }
+  
+  // Restore the draft from localStorage and populate the form.
+  function restoreDraft() {
+    var savedDraft = localStorage.getItem("articleDraft");
+    if (savedDraft) {
+      try {
+        var formData = JSON.parse(savedDraft);
+        formData.forEach(function(field){
+          var $field = $("[name='" + field.name + "']");
+          if ($field.length > 0) {
+            $field.val(field.value);
+          }
+        });
+        $("#autosave-status").text("Draft restored at " + new Date().toLocaleTimeString());
+        Notifications.show("Draft restored from local storage", "info");
+      } catch(err) {
+        console.error("Error restoring draft:", err);
+      }
+    }
+  }
+  
+  // Send the current form data to the server via AJAX.
+  function sendDraftToServer() {
     if (isSaving) return;
-    
-    // Serialize the form data.
-    var formData = $("#article-form").serialize();
-    
     isSaving = true;
+    var formData = $("#article-form").serialize();
     $.ajax({
-      url: "ajax/autosave.php", // Correct URL: relative to addarticle.php (in the root)
+      url: "ajax/autosave.php",
       type: "POST",
       data: formData,
       success: function(response) {
-        // Update the autosave status with the current time.
-        $("#autosave-status").text("Draft saved at " + new Date().toLocaleTimeString());
+        $("#autosave-status").text("Draft autosaved on server at " + new Date().toLocaleTimeString());
+        Notifications.show("Draft autosaved on server", "info");
         isSaving = false;
       },
       error: function() {
-        $("#autosave-status").text("Autosave error.");
+        $("#autosave-status").text("Error autosaving on server.");
+        Notifications.show("Autosave server error", "error");
         isSaving = false;
       }
     });
   }
   
-  /**
-   * Initializes the autosave functionality.
-   * Sets up a timer to automatically trigger autoSave() at regular intervals.
-   */
-  function initAutosave() {
-    setInterval(autoSave, interval);
+  // Combined debounced autosave – called on input events.
+  function debouncedAutosave() {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(function(){
+      saveDraftLocally();
+      sendDraftToServer();
+    }, debounceDelay);
+  }
+  
+  // Initialize autosave: restore draft and set up event listeners.
+  function init() {
+    restoreDraft(); // Populate form with saved draft, if available.
+    
+    // On any input in the form, start a debounced autosave.
+    $("#article-form").on("input", debouncedAutosave);
+    
+    // Periodic autosave regardless of input activity.
+    setInterval(function(){
+      saveDraftLocally();
+      sendDraftToServer();
+    }, autosaveInterval);
   }
   
   return {
-    init: initAutosave
+    init: init,
+    restoreDraft: restoreDraft
   };
 })();

@@ -2,18 +2,21 @@ var Dropzones = (function(){
   function init(){
     console.log("Dropzones initialized");
 
+    // Highlight dropzone on dragenter/dragover
     $(document).on("dragenter dragover", ".dropzone", function(e){
       e.preventDefault();
       e.stopPropagation();
       $(this).addClass("dragover");
     });
 
+    // Remove highlight when dragging leaves
     $(document).on("dragleave", ".dropzone", function(e){
       e.preventDefault();
       e.stopPropagation();
       $(this).removeClass("dragover");
     });
 
+    // Handle drop events
     $(document).on("drop", ".dropzone", function(e){
       e.preventDefault();
       e.stopPropagation();
@@ -25,12 +28,14 @@ var Dropzones = (function(){
       }
     });
 
+    // When clicking the dropzone, trigger the file input if the target isn’t the input itself.
     $(document).on("click", ".dropzone", function(e){
       if(!$(e.target).is("input[type='file']")){
         $(this).find("input[type='file']").trigger("click");
       }
     });
 
+    // Handle file selection via file input
     $(document).on("change", ".dropzone input[type='file']", function(e){
       var files = e.target.files;
       console.log("Files selected:", files);
@@ -45,37 +50,42 @@ var Dropzones = (function(){
     if(!files || files.length === 0) return;
     console.log("Processing files in dropzone:", $dropzone);
 
-    // Thumbnail (single file).
+    // Thumbnail dropzone (single file)
     if($dropzone.hasClass("dropzone-thumbnail")){
       console.log("Thumbnail file selected:", files[0]);
       ImageEditor.showCropper([files[0]], function(croppedDataArray){
+        var imageData = croppedDataArray[0];
+        // Check if the returned data is an object with an `image` property.
+        var imageSrc = (typeof imageData === "object" && imageData.image) ? imageData.image : imageData;
         if(typeof Sections !== 'undefined' && typeof Sections.renderPolaroid === 'function'){
-          var html = Sections.renderPolaroid(croppedDataArray[0], "thumbnail");
+          var html = Sections.renderPolaroid(imageSrc, "thumbnail");
           $(".thumbnail-preview").html(html);
         } else {
-          $(".thumbnail-preview").html('<img src="'+croppedDataArray[0]+'" alt="Thumbnail">');
+          $(".thumbnail-preview").html('<img src="'+imageSrc+'" alt="Thumbnail">');
         }
         $dropzone.hide();
       });
     }
-    // Gallery (multiple files).
+    // Gallery dropzone (multiple files)
     else if($dropzone.hasClass("dropzone-gallery")){
       console.log("Gallery files selected:", files);
       var filesArr = Array.from(files);
       ImageEditor.showCropper(filesArr,
-         // Final callback – do nothing extra; we avoid clearing prior images.
+         // Final callback – perform any finalization (here we simply remove any add-gallery image placeholder)
          function(finalCroppedArray){
            $dropzone.find(".add-gallery-image").remove();
          },
-         // Progress callback: Append each new cropped image as a polaroid.
-         function(progressDataUrl, croppedArray, remaining){
+         // Progress callback: Append each new cropped image as a polaroid to the gallery container.
+         function(progressData, croppedArray, remaining){
+           var imageData = progressData;
+           var imageSrc = (typeof imageData === "object" && imageData.image) ? imageData.image : imageData;
            var $galleryContainer = $dropzone.siblings(".gallery-container");
            if($galleryContainer.length > 0){
              if(typeof Sections !== 'undefined' && typeof Sections.renderPolaroid === 'function'){
-               var polaroidHTML = Sections.renderPolaroid(progressDataUrl, "gallery");
+               var polaroidHTML = Sections.renderPolaroid(imageSrc, "gallery");
                $galleryContainer.append(polaroidHTML);
              } else {
-               $galleryContainer.append('<img src="'+progressDataUrl+'" alt="Gallery Image" style="max-width:100%; max-height:100%;">');
+               $galleryContainer.append('<img src="'+imageSrc+'" alt="Gallery Image" style="max-width:100%; max-height:100%;">');
              }
              // Initialize or refresh sortable on this gallery container.
              if(!$galleryContainer.hasClass("ui-sortable")){
@@ -90,16 +100,18 @@ var Dropzones = (function(){
          }
       );
     }
-    // Image section (single file).
+    // Image section dropzone (single file for inline image insertion)
     else if($dropzone.hasClass("dropzone-image")){
       console.log("Image file selected:", files[0]);
       ImageEditor.showCropper([files[0]], function(croppedDataArray){
+          var imageData = croppedDataArray[0];
+          var imageSrc = (typeof imageData === "object" && imageData.image) ? imageData.image : imageData;
           var $imgPreview = $dropzone.siblings(".image-preview-container");
           if(typeof Sections !== 'undefined' && typeof Sections.renderPolaroid === 'function'){
-             var html = Sections.renderPolaroid(croppedDataArray[0], "image");
+             var html = Sections.renderPolaroid(imageSrc, "image");
              $imgPreview.html(html);
           } else {
-             $imgPreview.html('<img src="'+croppedDataArray[0]+'" alt="Section Image" style="max-width:100%; max-height:100%;">');
+             $imgPreview.html('<img src="'+imageSrc+'" alt="Section Image" style="max-width:100%; max-height:100%;">');
           }
           $dropzone.hide();
       });

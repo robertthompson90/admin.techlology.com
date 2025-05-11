@@ -1,44 +1,67 @@
 // js/keyboard.js
-
 var KeyboardShortcuts = (function(){
-  /**
-   * Initializes keyboard shortcuts and ARIA enhancements for accessibility.
-   * - Ctrl+N: Focus the section selector to add a new section.
-   * - Ctrl+P: Trigger the preview mode.
-   * - Ctrl+Left Arrow: Navigate to the previous form step.
-   * - Ctrl+Right Arrow: Navigate to the next form step.
-   * - Esc: Closes any open modals (preview or cropper).
-   * Additionally, the module sets ARIA roles for improved screen reader support.
-   */
+  // Check if an input, textarea, or select is focused.
+  function isTyping() {
+    return $("input:focus, textarea:focus, select:focus").length > 0;
+  }
+  
+  // Trigger preview mode.
+  function openPreview() {
+    // Trigger the preview button, which is already bound to open the preview modal.
+    $("#preview-button").trigger("click");
+  }
+  
+  // Submit the form.
+  function submitArticle() {
+    // Optionally add a confirmation or autosave trigger
+    $("#article-form").submit();
+  }
+  
+  // Navigate tabs based on arrow keys.
+  function navigateTabs(direction) {
+    var $tabs = $("#article-form ul.form-tabs li");
+    var $active = $tabs.filter(".active");
+    var currentIndex = $tabs.index($active);
+    
+    if (direction === "next") {
+      var nextIndex = (currentIndex + 1) % $tabs.length;
+      FormTabs.showStep(nextIndex);
+    } else if (direction === "prev") {
+      var prevIndex = (currentIndex - 1 + $tabs.length) % $tabs.length;
+      FormTabs.showStep(prevIndex);
+    }
+  }
+  
+  // Bind global keydown events.
   function init() {
-    // Global keydown event handler.
-    $(document).on("keydown", function(e) {
-      // Ignore keyboard shortcuts when typing in input, textarea, or select elements.
-      if ($(e.target).is("input, textarea, select")) return;
+    $(document).on("keydown", function(e){
+      // Avoid interfering if the user is typing in an input.
+      if (isTyping()) return;
       
-      if (e.ctrlKey && e.keyCode === 78) { // Ctrl+N
+      // Ctrl + P: Open Preview.
+      if (e.ctrlKey && e.key.toLowerCase() === "p") {
         e.preventDefault();
-        $("#section-type-selector-top").focus();
-      } else if (e.ctrlKey && e.keyCode === 80) { // Ctrl+P
+        openPreview();
+      }
+      
+      // Ctrl + S: Submit/save the article.
+      if (e.ctrlKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        $("#preview-button").trigger("click");
-      } else if (e.keyCode === 27) { // Escape key
-        $("#preview-modal").hide();
-        $("#cropper-modal").hide();
-      } else if (e.ctrlKey && e.keyCode === 37) { // Ctrl+Left Arrow
+        submitArticle();
+      }
+      
+      // Left arrow key navigates to previous tab.
+      if (!e.ctrlKey && e.key === "ArrowLeft") {
         e.preventDefault();
-        $(".prev-step").first().trigger("click");
-      } else if (e.ctrlKey && e.keyCode === 39) { // Ctrl+Right Arrow
+        navigateTabs("prev");
+      }
+      
+      // Right arrow key navigates to next tab.
+      if (!e.ctrlKey && e.key === "ArrowRight") {
         e.preventDefault();
-        $(".next-step").first().trigger("click");
+        navigateTabs("next");
       }
     });
-    
-    // Enhance ARIA attributes for better accessibility.
-    $("form#article-form").attr("role", "form");
-    $(".form-step").attr("role", "tabpanel");
-    $(".nav-buttons").attr("role", "navigation");
-    $("#autosave-status").attr("aria-live", "polite");
   }
   
   return {

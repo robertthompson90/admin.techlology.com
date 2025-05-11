@@ -1,0 +1,80 @@
+/* css/editor-extensions.css – Additional Styles for New Editor Integrations */
+
+/* Autosave Status */
+#autosave-status {
+  font-size: 0.9em;
+  color: #777;
+}
+
+/* Media Panels (Global Media Library and Staging Area) */
+.media-panels {
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 300px;
+  background: #f9f9f9;
+  padding: 10px;
+  overflow-y: auto;
+  border-left: 1px solid #ccc;
+}
+.media-panels h3 {
+  margin-top: 0;
+  font-size: 1.1em;
+}
+
+/* Staging Area and Global Media */
+#staging-area, 
+#global-media-library {
+  margin-bottom: 20px;
+}
+#staging-area #staging-media, 
+#global-media-library #global-media {
+  border: 1px solid #ddd;
+  padding: 5px;
+  min-height: 100px;
+}
+
+/* Selected Tags Display */
+#selected-tags {
+  margin-top: 10px;
+}
+#selected-tags .tag {
+  display: inline-block;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  padding: 3px 8px;
+  margin: 2px;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Preview Modal */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1100;
+}
+.preview-modal .preview-modal-content {
+  background: #fff;
+  padding: 20px;
+  width: 90%;
+  max-width: 900px;
+  position: relative;
+}
+.preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 1.5em;
+  background: none;
+  border: none;
+  cursor: pointer;
+}

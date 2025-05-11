@@ -1,0 +1,109 @@
+/* css/cropper.css – Styles for the Cropper Modal */
+
+/* Cropper Modal Overlay */
+.cropper-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: none; /* Hidden by default – toggle with JS (add a class like .active) */
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* When you want to show the modal, you can toggle a class (or inline style) to display: flex */
+.cropper-modal.active {
+  display: flex;
+}
+
+/* Cropper Area: the container holding the image */
+.cropper-area {
+  max-height: 500px;
+  overflow: hidden;
+  text-align: center;
+  background: #f2f2f2;
+  padding: 10px;
+}
+
+/* Cropper Image Styling */
+.cropper-area img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Optional Gallery Navigation (if you implement multiphase cropping) */
+.gallery-nav {
+  margin: 10px 0;
+  text-align: center;
+}
+.gallery-nav button {
+  margin: 0 5px;
+}
+
+/* Cropper Controls Panel */
+.cropper-controls {
+  background: #fff;
+  padding: 15px;
+  width: 80%;
+  max-width: 900px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  margin-top: 20px;
+}
+
+/* Aspect Ratio Controls */
+.aspect-ratio-controls button {
+  margin-right: 5px;
+  padding: 8px 12px;
+  background: #eee;
+  border: none;
+  cursor: pointer;
+}
+.aspect-ratio-controls button:hover {
+  background: #ddd;
+}
+
+/* Zoom & Fit Controls */
+.zoom-fit-controls {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+}
+.zoom-control {
+  margin-right: 10px;
+}
+.zoom-control label {
+  margin-right: 5px;
+}
+#zoom-slider {
+  vertical-align: middle;
+}
+#reset-zoom-btn,
+#fit-image-btn {
+  padding: 6px 10px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+
+/* Live Preview Wrapper (inside cropper) */
+.live-preview-wrapper {
+  margin-top: 15px;
+}
+.live-preview {
+  background: #f9f9f9;
+  padding: 10px;
+  border: 1px solid #ccc;
+}
+
+/* Action Buttons (Crop, Cancel) */
+.action-buttons {
+  margin-top: 15px;
+  text-align: right;
+}
+.action-buttons button {
+  padding: 8px 12px;
+  margin-left: 5px;
+  cursor: pointer;
+}

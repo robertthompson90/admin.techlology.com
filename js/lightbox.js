@@ -1,27 +1,26 @@
-// js/lightbox.js
-
 var Lightbox = (function(){
-  /**
-   * Initializes the lightbox functionality.
-   * Listens for clicks on images within polaroid containers and opens them in an overlay.
-   */
   function init() {
-    // Delegate click event for polaroid images.
+    // Delegate a click event for images inside polaroid containers.
     $("body").on("click", ".polaroid img", function(e) {
       e.preventDefault();
       var imgSrc = $(this).attr("src");
+
+      // Optional: if the full screen cropper overlay is active, do not open the lightbox.
+      if ($("#cropper-modal").is(":visible")) {
+        return; // Avoid conflict with full-screen image editor.
+      }
       
-      // If lightbox overlay doesn't exist yet, create it.
+      // If the lightbox overlay does not exist, create it.
       if ($("#lightbox-overlay").length === 0) {
         $("body").append(
           '<div id="lightbox-overlay">' +
             '<div id="lightbox-content">' +
-                '<img src="" alt="Lightbox Image">' +
+              '<img src="" alt="Lightbox Image">' +
             '</div>' +
           '</div>'
         );
         
-        // Basic styles for the overlay via jQuery (you may also include these in your CSS)
+        // Basic styling for the overlay (ideally, move these styles into your CSS file)
         $("#lightbox-overlay").css({
           "position": "fixed",
           "top": "0",
@@ -47,7 +46,7 @@ var Lightbox = (function(){
         });
       }
       
-      // Set the image source and display the lightbox.
+      // Set the image source for the lightbox and display it.
       $("#lightbox-overlay img").attr("src", imgSrc);
       $("#lightbox-overlay").fadeIn(200);
     });
@@ -57,7 +56,7 @@ var Lightbox = (function(){
       $(this).fadeOut(200);
     });
   }
-
+  
   return {
     init: init
   };

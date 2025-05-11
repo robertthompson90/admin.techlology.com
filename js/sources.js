@@ -5,6 +5,7 @@ var Sources = (function(){
   /**
    * Checks if the last source block has both title and URL filled.
    * If so, the "Add Source" button is displayed; otherwise, it remains hidden.
+   * Triggers a custom event "source:updated" after checking.
    */
   function checkSourceCompletion(){
     var $lastSource = $("#sources-container .source").last();
@@ -16,6 +17,9 @@ var Sources = (function(){
     } else {
       $("#add-source-btn").hide();
     }
+    
+    // Trigger a custom event for any external bound modules (for example, autosave)
+    $(document).trigger("source:updated");
   }
   
   /**
@@ -59,6 +63,9 @@ var Sources = (function(){
       
       // Hide the Add Source button until the new block is properly filled.
       $("#add-source-btn").hide();
+      
+      // Trigger an event to signal that a new source was added.
+      $(document).trigger("source:added", [sourceDiv]);
     });
   }
   
