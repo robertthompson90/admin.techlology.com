@@ -1,4 +1,6 @@
-/* RESET & BASE */
+/* =====================================================
+   RESET & BASE
+===================================================== */
 * {
   margin: 0;
   padding: 0;
@@ -14,17 +16,25 @@ body {
   color: #e1e1e1;
 }
 
-/* LAYOUT */
+/* =====================================================
+   LAYOUT & GRID (Using a 3-Column Grid)
+===================================================== */
 .layout {
-  display: flex;
-  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 220px 1fr 380px;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
 }
+
+/* =====================================================
+   SIDEBAR (Left Column)
+===================================================== */
 .sidebar {
-  width: 220px;
-  background: #1a1d25;
+  background-color: #2d2d2d;
+  color: #fff;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
+  overflow-y: auto;
 }
 .sidebar-title {
   font-size: 24px;
@@ -33,12 +43,30 @@ body {
   margin-bottom: 30px;
   text-align: center;
 }
+
+/* =====================================================
+   MAIN WORKSPACE (Middle Column)
+===================================================== */
 .main {
-  flex: 1;
-  padding: 30px;
+  padding: 20px;
+  background: #f5f5f5;
+  overflow-y: auto;
 }
 
-/* NAVIGATION */
+/* =====================================================
+   MEDIA PANELS (Right Column)
+===================================================== */
+.media-panels {
+  background: #1f222b;
+  padding: 15px;
+  border-left: 1px solid #333;
+  overflow-y: auto;
+  color: #e1e1e1;
+}
+
+/* =====================================================
+   NAVIGATION
+===================================================== */
 .nav {
   list-style: none;
 }
@@ -69,7 +97,9 @@ body {
   color: #f44336;
 }
 
-/* CARD STYLING */
+/* =====================================================
+   CARDS & FORM ELEMENTS
+===================================================== */
 .card {
   background: #1f222b;
   border-radius: 12px;
@@ -77,8 +107,11 @@ body {
   margin-bottom: 20px;
   box-shadow: 0 0 8px rgba(0,0,0,0.4);
 }
-
-/* FORM ELEMENTS */
+.card h2 {
+  margin-top: 0;
+  color: #fff;
+  font-size: 1.2em;
+}
 input[type="text"],
 input[type="url"],
 textarea,
@@ -92,16 +125,6 @@ select {
   background-color: #0f1117;
   color: #e1e1e1;
 }
-.hidden-file-input {
-  opacity: 0;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 2;
-  cursor: pointer;
-}
 textarea {
   resize: vertical;
 }
@@ -111,7 +134,9 @@ label {
   margin-bottom: 5px;
 }
 
-/* TAG SECTION */
+/* =====================================================
+   TAGS
+===================================================== */
 #selected-tags {
   margin-top: 10px;
 }
@@ -131,7 +156,9 @@ label {
   cursor: pointer;
 }
 
-/* DRAG HANDLE & PADLOCK */
+/* =====================================================
+   DRAG HANDLE & PADLOCK (Modular Sections)
+===================================================== */
 .drag-handle {
   cursor: move;
   font-size: 18px;
@@ -144,7 +171,9 @@ label {
   margin-left: auto;
 }
 
-/* MODULAR SECTIONS */
+/* =====================================================
+   MODULAR SECTIONS
+===================================================== */
 #sections-container .modular-section {
   background: #252933;
   border: 1px dashed #444;
@@ -173,12 +202,14 @@ label {
   cursor: pointer;
   margin-top: 10px;
 }
-/* For rating sections, hide drag handle and show padlock icon */
+/* Hide drag handle for rating sections & show padlock icon instead */
 #sections-container .rating-section .drag-handle {
   display: none;
 }
 
-/* PROS & CONS */
+/* =====================================================
+   PROS & CONS
+===================================================== */
 .pros-cons-wrapper {
   display: flex;
   gap: 20px;
@@ -217,67 +248,22 @@ label {
   margin-right: 5px;
 }
 
-/* DROPZONE STYLES */
+/* =====================================================
+   DROPZONE STYLES & IMAGE PREVIEW (for Gallery)
+===================================================== */
 .dropzone {
   position: relative;
   border: 2px dashed #888;
   padding: 20px;
   text-align: center;
+  margin-top: 10px;
   cursor: pointer;
 }
 .dropzone:hover,
 .dropzone.dragover {
   border-color: #007bff;
-  background: rgba(0, 123, 255, 0.1);
+  background: rgba(0,123,255,0.1);
 }
-/* POLAROID-STYLE PHOTO BOXES */
-.polaroid {
-  width: 150px;
-  height: 150px;
-  background: #fff;
-  padding: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  margin: 10px auto 0;
-}
-.polaroid-image {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.polaroid-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.polaroid-caption {
-  width: 100%;
-  margin-top: 5px;
-  padding: 4px;
-  border: 1px solid #ccc;
-  border-radius: 2px;
-  font-size: 12px;
-}
-.remove-photo {
-  background: #f44336;
-  border: none;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  margin-top: 5px;
-}
-
-/* IMAGE PREVIEW CONTAINER (for IMAGE_SECTION) */
 .image-preview-container {
   display: flex;
   align-items: center;
@@ -288,8 +274,9 @@ label {
   display: none;
 }
 
-/* GALLERY SECTION */
-/* Gallery Navigation Controls */
+/* =====================================================
+   GALLERY SECTION
+===================================================== */
 .gallery-nav {
   margin: 10px 0;
   text-align: center;
@@ -307,7 +294,6 @@ label {
 .gallery-nav button:hover {
   background: #333;
 }
-
 .dropzone.dropzone-gallery {
   border: 2px dashed #555;
   padding: 20px;
@@ -318,7 +304,7 @@ label {
 .dropzone.dropzone-gallery:hover,
 .dropzone.dropzone-gallery.dragover {
   border-color: #007bff;
-  background: rgba(0, 123, 255, 0.1);
+  background: rgba(0,123,255,0.1);
 }
 .gallery-container {
   display: flex;
@@ -367,7 +353,9 @@ label {
   height: 150px;
 }
 
-/* RATING WIDGET */
+/* =====================================================
+   RATING WIDGET
+===================================================== */
 .rating-widget {
   display: inline-block;
   margin-bottom: 10px;
@@ -382,7 +370,9 @@ label {
   color: #ffb300;
 }
 
-/* BUTTON STYLING */
+/* =====================================================
+   BUTTON STYLING
+===================================================== */
 button,
 input[type="submit"] {
   background: #2a2e3a;
@@ -401,7 +391,6 @@ input[type="submit"]:hover {
   background: #2a2e3a;
   margin-top: 10px;
 }
-/* Force remove buttons to be red */
 .remove-gallery-item,
 .remove-section,
 .remove-source,
@@ -413,7 +402,9 @@ input[type="submit"]:hover {
   margin-top: 10px;
 }
 
-/* SOURCES MODULE */
+/* =====================================================
+   SOURCES MODULE
+===================================================== */
 .source {
   background: #1f222b;
   border: 1px solid #333;
@@ -439,8 +430,9 @@ input[type="submit"]:hover {
   cursor: pointer;
 }
 
-/* LIGHTBOX STYLING */
-/* If your lightbox JS generates #lightbox-overlay and #lightbox-content: */
+/* =====================================================
+   LIGHTBOX STYLING
+===================================================== */
 #lightbox-overlay {
   display: none;
   position: fixed;
@@ -467,7 +459,9 @@ input[type="submit"]:hover {
   border-radius: 5px;
 }
 
-/* AUTOSAVE STATUS */
+/* =====================================================
+   AUTOSAVE STATUS & VALIDATION
+===================================================== */
 #autosave-status {
   padding: 5px 10px;
   background: #2a2e3a;
@@ -475,19 +469,18 @@ input[type="submit"]:hover {
   font-size: 14px;
   margin-top: 10px;
 }
-
-/* VALIDATION FEEDBACK */
 .input-error {
   border-color: #f44336 !important;
 }
-
 .error-message {
   color: #f44336;
   font-size: 12px;
   margin-top: 4px;
 }
 
-/* Preview Modal */
+/* =====================================================
+   PREVIEW MODAL
+===================================================== */
 .preview-modal {
   position: fixed;
   top: 0;
@@ -507,6 +500,7 @@ input[type="submit"]:hover {
   max-width: 90%;
   max-height: 90%;
   overflow-y: auto;
+  color: #e1e1e1;
   position: relative;
 }
 .preview-close {
@@ -526,11 +520,13 @@ input[type="submit"]:hover {
   margin: -1px;
   padding: 0;
   border: 0;
-  clip: rect(0, 0, 0, 0);
+  clip: rect(0,0,0,0);
   overflow: hidden;
 }
 
-/* SEGMENTED FORM NAVIGATION */
+/* =====================================================
+   SEGMENTED FORM NAVIGATION
+===================================================== */
 .form-step {
   display: none;
 }
@@ -551,8 +547,9 @@ input[type="submit"]:hover {
   background: #333;
 }
 
-/* CROPPER MODAL STYLES */
-/* Use a semi-transparent background instead of manipulating opacity */
+/* =====================================================
+   CROPPER MODAL & ACTION BUTTONS
+===================================================== */
 #cropper-modal {
   display: none;
   position: fixed;
@@ -562,14 +559,11 @@ input[type="submit"]:hover {
   height: 100vh;
   background: rgba(0, 0, 0, 0.7) !important;
   z-index: 9999;
-  display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-    opacity: 1 !important;
+  opacity: 1 !important;
 }
-
-/* Cropper Area: Fixed size for the image only */
 #cropper-area {
   width: 80vw;
   height: 80vh;
@@ -579,80 +573,17 @@ input[type="submit"]:hover {
   justify-content: center;
   overflow: hidden;
 }
-
-/* The image will always be fully visible with contain */
 #cropper-area img {
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
-
-/* Controls Section: Placed outside the crop area */
 #cropper-controls {
   margin-top: 20px;
   width: 80vw;
   color: #fff;
   text-align: center;
 }
-
-/* Aspect Ratio Buttons */
-.aspect-ratio-controls {
-  margin-bottom: 10px;
-}
-.aspect-btn {
-  background: #2a2e3a;
-  color: #fff;
-  border: none;
-  margin: 0 5px;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-.aspect-btn:hover {
-  background: #333;
-}
-/* Highlight the active aspect button */
-.aspect-btn.active {
-  background: #007bff;
-  box-shadow: 0 0 5px rgba(0,123,255,0.8);
-}
-
-/* Zoom & Fit Controls */
-.zoom-fit-controls {
-  margin-bottom: 10px;
-}
-.zoom-control {
-  display: inline-block;
-  margin-right: 10px;
-}
-#zoom-slider {
-  vertical-align: middle;
-}
-
-/* Live Preview: Fixed 200x200 with content constrained */
-.live-preview-wrapper {
-  margin-bottom: 10px;
-}
-.live-preview {
-  width: 200px;
-  height: 200px;
-  margin: 0 auto;
-  border: 1px solid #444;
-  background: #fff;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.live-preview h3 {
-  margin: 0 0 5px;
-  color: #000;
-  font-size: 16px;
-}
-
-/* Action Buttons */
 .action-buttons button {
   background: #2a2e3a;
   color: #fff;
@@ -667,861 +598,9 @@ input[type="submit"]:hover {
   background: #333;
 }
 
-/* RESPONSIVE DESIGN */
-@media (max-width: 600px) {
-  .sidebar {
-    display: none;
-  }
-  .main {
-    padding: 10px;
-  }
-  .card {
-    padding: 10px;
-  }
-  .polaroid, .gallery-item, .image-preview-container {
-    width: 100px;
-    height: 100px;
-  }
-  .polaroid-caption {
-    font-size: 10px;
-  }
-  .gallery-preview img, .polaroid-image img {
-    max-width: 90px;
-    max-height: 90px;
-  }
-}
-
-/* ========================= */
-/*   EDITOR ENHANCEMENTS      */
-/* ========================= */
-
-/* Global Media Library & Staging Area Panel */
-.media-panels {
-  position: fixed;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 350px; /* Adjust width as needed */
-  background: #1f222b;
-  border-left: 1px solid #333;
-  overflow-y: auto;
-  padding: 15px;
-  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.3);
-  z-index: 2000;
-  color: #e1e1e1;
-}
-.media-panels h3 {
-  margin-top: 0;
-  font-size: 1.2em;
-  color: #fff;
-  text-align: center;
-}
-
-/* Search box for media */
-.media-search {
-  margin-bottom: 10px;
-}
-.media-search input {
-  width: 100%;
-  padding: 5px;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background: #0f1117;
-  color: #e1e1e1;
-}
-
-/* Global Media Items */
-#global-media {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.global-media-item {
-  width: 100px;
-  height: 100px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-}
-.global-media-item img {
-  max-width: 100%;
-  max-height: 70%;
-  object-fit: cover;
-}
-.global-media-item .media-title {
-  font-size: 10px;
-  text-align: center;
-  padding: 2px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  width: 100%;
-  position: absolute;
-  bottom: 0;
-}
-.global-media-item .pin-button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(0,0,0,0.5);
-  border: none;
-  color: #ffb300;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* Staging Area */
-#staging-area {
-  margin-bottom: 20px;
-  padding: 5px;
-  border: 1px solid #ddd;
-  background: #252933;
-  min-height: 100px;
-}
-#staging-area h3 {
-  font-size: 1.1em;
-  margin: 0 0 10px;
-  text-align: center;
-}
-#staging-media .global-media-item {
-  width: 80px;
-  height: 80px;
-}
-
-
-
-/* Toast Notifications */
-.toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #333;
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 4px;
-  font-size: 14px;
-  opacity: 0.9;
-  z-index: 9999;
-  display: none;
-}
-.toast.info { background: #007bff; }
-.toast.success { background: #28a745; }
-.toast.error { background: #dc3545; }
-
-
-/* Form Tabs Navigation */
-ul.form-tabs {
-  list-style: none;
-  margin: 0 0 15px 0;
-  padding: 0;
-  display: flex;
-  border-bottom: 2px solid #333;
-}
-ul.form-tabs li {
-  padding: 10px 15px;
-  cursor: pointer;
-  background: #1f222b;
-  color: #e1e1e1;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
-  margin-right: 5px;
-}
-ul.form-tabs li.active {
-  background: #007bff;
-  color: #fff;
-  border-bottom: 2px solid #007bff;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip: rect(0 0 0 0);
-  overflow: hidden;
-}
-
-@media (max-width: 768px) {
-  .media-panels {
-    width: 100%;
-    position: static;
-    box-shadow: none;
-    border-left: none;
-    margin-top: 15px;
-  }
-}
-
-/* Media Upload Area */
-.media-upload {
-  margin-bottom: 10px;
-  text-align: center;
-}
-.media-upload .upload-btn {
-  padding: 5px 10px;
-  background: #2a2e3a;
-  border: none;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.media-upload .upload-btn:hover {
-  background: #333;
-}
-
-
-/* Global Layout: 3-Column Grid */
-.layout {
-  display: grid;
-  grid-template-columns: 220px 1fr 380px;
-  grid-gap: 0;
-  height: 100vh;
-  overflow: hidden;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* Sidebar: Left Column */
-.sidebar {
-  background: #2d2d2d;
-  color: #fff;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-/* Main Workspace: Middle Column */
-.main {
-  padding: 20px;
-  background: #f5f5f5;
-  overflow-y: auto;
-}
-
-/* Media Panels: Right Column */
-.media-panels {
-  background: #1f222b;
-  padding: 15px;
-  border-left: 1px solid #333;
-  overflow-y: auto;
-}
-
-/* Staging Area: Article-Specific Media */
-#staging-area {
-  background: #252933;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 4px;
-  min-height: 150px;
-}
-#staging-area h3 {
-  margin: 0 0 10px;
-  text-align: center;
-  color: #fff;
-}
-
-/* Staging Area Items: Polaroid Style */
-.polaroid {
-  display: inline-block;
-  width: 80px;
-  background: #fff;
-  padding: 5px;
-  margin: 5px;
-  border: 1px solid #ddd;
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  position: relative;
-}
-.polaroid img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.polaroid .caption {
-  font-size: 10px;
-  padding: 3px;
-  background: #f9f9f9;
-  cursor: pointer;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  border-top: 1px solid #eee;
-}
-
-/* Global Media Library Items */
-#global-media {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.global-media-item {
-  width: 100px;
-  height: 100px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  position: relative;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.global-media-item:hover {
-  transform: scale(1.05);
-}
-.global-media-item img {
-  width: 100%;
-  height: 70%;
-  object-fit: cover;
-  border-bottom: 1px solid #ccc;
-}
-.global-media-item .media-title {
-  font-size: 10px;
-  padding: 2px;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  text-align: center;
-}
-.global-media-item .pin-button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(0,0,0,0.6);
-  border: none;
-  color: #ffb300;
-  font-size: 14px;
-  padding: 2px 4px;
-  border-radius: 2px;
-  cursor: pointer;
-}
-
-/* Media Panel Upload & Search */
-.media-search input,
-.media-upload .upload-btn {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-/* Advanced Image Editor Modal */
-#cropper-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5000;
-}
-#cropper-area {
-  max-width: 80%;
-  max-height: 80%;
-  background: #000;
-  border: 2px solid #333;
-}
-#cropper-modal .cropper-controls {
-  margin-top: 10px;
-  background: #1f222b;
-  padding: 10px;
-  width: 80%;
-  border-radius: 4px;
-  color: #e1e1e1;
-}
-#cropper-modal h2 {
-  color: #fff;
-}
-.advanced-controls .slider-group {
-  margin-bottom: 8px;
-}
-.advanced-controls label {
-  color: #fff;
-  font-size: 12px;
-  display: block;
-}
-.advanced-controls input[type="range"] {
-  width: 100%;
-  margin-top: 4px;
-}
-
-/* Preview Modal */
-.preview-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 4000;
-}
-.preview-modal-content {
-  background: #1f222b;
-  padding: 20px;
-  border-radius: 6px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-  position: relative;
-  color: #e1e1e1;
-}
-.preview-close {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 24px;
-  color: #fff;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip: rect(0,0,0,0);
-  overflow: hidden;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-  }
-  .sidebar, .media-panels {
-    position: static;
-    width: 100%;
-    height: auto;
-  }
-}
-
-
-/* Global Layout: 3-Column Grid */
-.layout {
-  display: grid;
-  grid-template-columns: 220px 1fr 380px;
-  grid-gap: 0;
-  height: 100vh;
-  overflow: hidden;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* Left Sidebar */
-.sidebar {
-  background: #2d2d2d;
-  color: #fff;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-/* Main Workspace */
-.main {
-  padding: 20px;
-  background: #f5f5f5;
-  overflow-y: auto;
-}
-
-/* Media Panels (Right Column) */
-.media-panels {
-  background: #1f222b;
-  padding: 15px;
-  border-left: 1px solid #333;
-  overflow-y: auto;
-}
-
-/* Staging Area */
-#staging-area {
-  background: #252933;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 4px;
-  min-height: 150px;
-}
-#staging-area h3 {
-  margin: 0 0 10px;
-  text-align: center;
-  color: #fff;
-}
-
-/* Polaroid Style for Staging Items */
-.polaroid {
-  display: inline-block;
-  width: 100px;
-  background: #fff;
-  padding: 5px;
-  margin: 5px;
-  border: 1px solid #ddd;
-  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
-  text-align: center;
-  position: relative;
-}
-.polaroid img {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-.polaroid .caption {
-  font-size: 10px;
-  padding: 3px;
-  background: #f9f9f9;
-  border-top: 1px solid #eee;
-  cursor: pointer;
-}
-.polaroid .caption.editing {
-  border: 1px dashed #007bff;
-  background: #fff;
-}
-.polaroid .delete-btn {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(255, 0, 0, 0.8);
-  border: none;
-  color: #fff;
-  font-size: 14px;
-  padding: 2px 6px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: block;
-}
-.staging-placeholder { border: 2px dashed #ccc; height: 100px; }
-
-/* Global Media Library Items */
-#global-media {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.global-media-item {
-  width: 100px;
-  height: 100px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  position: relative;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-.global-media-item:hover {
-  transform: scale(1.05);
-}
-.global-media-item img {
-  width: 100%;
-  height: 70%;
-  object-fit: cover;
-  border-bottom: 1px solid #ccc;
-}
-.global-media-item .media-title {
-  font-size: 10px;
-  padding: 2px;
-  background: rgba(0,0,0,0.6);
-  color: #fff;
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  text-align: center;
-}
-.global-media-item .pin-button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(0,0,0,0.6);
-  border: none;
-  color: #ffb300;
-  font-size: 14px;
-  padding: 2px 4px;
-  border-radius: 2px;
-  cursor: pointer;
-}
-
-/* Advanced Image Editor Modal */
-#cropper-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5000;
-}
-#cropper-area {
-  max-width: 80%;
-  max-height: 80%;
-  background: #000;
-  border: 2px solid #333;
-}
-#cropper-modal .cropper-controls {
-  margin-top: 10px;
-  background: #1f222b;
-  padding: 10px;
-  width: 80%;
-  border-radius: 4px;
-  color: #e1e1e1;
-}
-.advanced-controls .slider-group {
-  margin-bottom: 8px;
-}
-.advanced-controls label {
-  color: #fff;
-  font-size: 12px;
-  display: block;
-}
-.advanced-controls input[type="range"] {
-  width: 100%;
-  margin-top: 4px;
-}
-
-/* Preview Modal */
-.preview-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 4000;
-}
-.preview-modal-content {
-  background: #1f222b;
-  padding: 20px;
-  border-radius: 6px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-  position: relative;
-  color: #e1e1e1;
-}
-.preview-close {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 24px;
-  color: #fff;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip: rect(0,0,0,0);
-  overflow: hidden;
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-  }
-  .sidebar, .media-panels {
-    position: static;
-    width: 100%;
-    height: auto;
-  }
-}
-
-
-/* Global Layout: 3-Column Grid */
-.layout {
-  display: grid;
-  grid-template-columns: 220px 1fr 380px;
-  height: 100vh;
-  overflow: hidden;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* Sidebar (Left Column) */
-.sidebar {
-  background-color: #2d2d2d;
-  color: #fff;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-/* Main Workspace (Middle Column) */
-.main {
-  background: #f5f5f5;
-  padding: 20px;
-  overflow-y: auto;
-}
-
-/* Media Panels (Right Column) */
-.media-panels {
-  background: #1f222b;
-  padding: 15px;
-  border-left: 1px solid #333;
-  overflow-y: auto;
-  color: #e1e1e1;
-}
-
-/* Form Cards */
-.card {
-  background: #fff;
-  padding: 15px;
-  margin: 10px 0;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-.card h2 {
-  margin-top: 0;
-}
-
-/* Buttons and Navigation */
-.nav-buttons {
-  margin: 10px 0;
-  text-align: right;
-}
-.nav-buttons button {
-  padding: 8px 12px;
-  background: #007bff;
-  border: none;
-  color: #fff;
-  border-radius: 3px;
-  cursor: pointer;
-}
-.nav-buttons button:hover {
-  background: #0056b3;
-}
-
-/* Dropzone */
-.dropzone {
-  border: 2px dashed #ccc;
-  padding: 20px;
-  text-align: center;
-  margin-top: 10px;
-  cursor: pointer;
-}
-.hidden-file-input {
-  display: none;
-}
-
-/* Staging Area */
-#staging-area {
-  background: #252933;
-  padding: 10px;
-  margin-bottom: 15px;
-  border-radius: 4px;
-  min-height: 150px;
-}
-#staging-area h3 {
-  text-align: center;
-  margin: 0 0 10px;
-  color: #fff;
-}
-
-/* Polaroid-Style Media Items */
-.polaroid {
-  display: inline-block;
-  width: 100px;
-  background: #fff;
-  padding: 5px;
-  margin: 5px;
-  border: 1px solid #ddd;
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-  position: relative;
-  text-align: center;
-}
-.polaroid img {
-  width: 100%;
-  height: auto;
-}
-.polaroid .caption {
-  font-size: 10px;
-  padding: 2px;
-  background: #f9f9f9;
-  border-top: 1px solid #eee;
-  cursor: pointer;
-}
-.polaroid .caption.editing {
-  border: 1px dashed #007bff;
-  background: #fff;
-}
-.polaroid .delete-btn {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(255,0,0,0.8);
-  border: none;
-  color: #fff;
-  font-size: 14px;
-  padding: 2px 6px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-/* Global Media Library Items */
-#global-media {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.global-media-item {
-  width: 100px;
-  height: 100px;
-  background: #fff;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  position: relative;
-  transition: transform 0.2s;
-  cursor: pointer;
-}
-.global-media-item:hover {
-  transform: scale(1.05);
-}
-.global-media-item img {
-  width: 100%;
-  height: 70%;
-  object-fit: cover;
-  border-bottom: 1px solid #ccc;
-}
-.global-media-item .media-title {
-  font-size: 10px;
-  padding: 2px;
-  background: rgba(0,0,0,0.6);
-  color: #fff;
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  text-align: center;
-}
-.global-media-item .pin-button {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: rgba(0,0,0,0.6);
-  border: none;
-  color: #ffb300;
-  font-size: 14px;
-  padding: 2px 4px;
-  border-radius: 2px;
-  cursor: pointer;
-}
-
-/* Advanced Cropper Modal */
+/* =====================================================
+   PART 5: ADVANCED CROPPER MODAL & PREVIEW MODAL
+===================================================== */
 .cropper-modal {
   position: fixed;
   top: 0;
@@ -1560,8 +639,6 @@ ul.form-tabs li.active {
   width: 100%;
   margin-top: 4px;
 }
-
-/* Preview Modal */
 .preview-modal {
   position: fixed;
   top: 0;
@@ -1604,7 +681,6 @@ ul.form-tabs li.active {
   clip: rect(0,0,0,0);
   overflow: hidden;
 }
-
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   .layout {
@@ -1612,8 +688,8 @@ ul.form-tabs li.active {
     grid-template-rows: auto auto auto;
   }
   .sidebar, .media-panels {
+    position: static;
     width: 100%;
     height: auto;
-    position: static;
   }
 }
