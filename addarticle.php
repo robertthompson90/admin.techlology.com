@@ -149,43 +149,41 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   
 </div> <!-- End of .layout -->
 
-<!-- Cropper Modal for Advanced Image Editing -->
+<!-- Advanced Cropper Modal for Image Editing -->
 <div id="cropper-modal" class="cropper-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="cropper-modal-title">
   <div id="cropper-area" class="cropper-area">
     <img id="cropper-image" src="" alt="Crop your image">
   </div>
-  <!-- Optional Gallery Navigation (if using multiphase cropping) -->
-  <div id="gallery-nav" class="gallery-nav" style="display: none;">
-    <button type="button" id="prev-image-btn">&larr;</button>
-    <span id="gallery-counter"></span>
-    <button type="button" id="next-image-btn">&rarr;</button>
-  </div>
-  <!-- Cropper Controls Panel -->
   <div id="cropper-controls" class="cropper-controls">
-    <h2 id="cropper-modal-title" class="visually-hidden">Image Editor</h2>
-    <div class="aspect-ratio-controls">
-      <button type="button" class="aspect-btn" data-ratio="1">1:1</button>
-      <button type="button" class="aspect-btn" data-ratio="16/9">16:9</button>
-      <button type="button" class="aspect-btn" data-ratio="4/3">4:3</button>
-      <button type="button" class="aspect-btn" data-ratio="NaN">Freeform</button>
-    </div>
-    <div class="zoom-fit-controls">
-      <div class="zoom-control">
-        <label for="zoom-slider">Zoom:</label>
-        <input type="range" id="zoom-slider" min="0.1" max="2" step="0.05" value="1">
+    <h2 id="cropper-modal-title" class="visually-hidden">Advanced Image Editor</h2>
+    <div class="advanced-controls">
+      <div class="slider-group">
+        <label for="brightness-slider">Brightness</label>
+        <input type="range" id="brightness-slider" min="50" max="150" value="100">
       </div>
-      <button type="button" id="reset-zoom-btn">Reset Zoom</button>
-      <button type="button" id="fit-image-btn">Fit Image</button>
+      <div class="slider-group">
+        <label for="contrast-slider">Contrast</label>
+        <input type="range" id="contrast-slider" min="50" max="150" value="100">
+      </div>
+      <div class="slider-group">
+        <label for="saturation-slider">Saturation</label>
+        <input type="range" id="saturation-slider" min="50" max="150" value="100">
+      </div>
+      <div class="slider-group">
+        <label for="hue-slider">Hue</label>
+        <input type="range" id="hue-slider" min="0" max="360" value="0">
+      </div>
+    </div>
+    <div class="action-buttons">
+      <button type="button" id="cropper-crop-button">Crop</button>
+      <button type="button" id="cropper-save-new-image">Save New Image</button>
+      <button type="button" id="cropper-cancel-button">Cancel</button>
     </div>
     <div class="live-preview-wrapper">
       <div class="live-preview">
         <h3>Live Preview</h3>
         <div id="cropper-live-preview"></div>
       </div>
-    </div>
-    <div class="action-buttons">
-      <button type="button" id="cropper-crop-button">Crop</button>
-      <button type="button" id="cropper-cancel-button">Cancel</button>
     </div>
   </div>
 </div>
@@ -205,6 +203,7 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 <!-- Custom Script Modules – Ensure proper load order -->
 <script src="js/sections.js"></script>
 <script src="js/imageEditor.js"></script>
+<script src="js/advancedImageEditor.js"></script>
 <script src="js/dropzones.js"></script>
 <script src="js/tags.js"></script>
 <script src="js/sources.js"></script>
@@ -215,11 +214,14 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 <script src="js/preview.js"></script>
 <script src="js/segmented.js"></script>
 <script src="js/keyboard.js"></script>
-<script src="js/keyboard.js"></script>
 <script src="js/mediaLibrary.js"></script>
 <script src="js/formTabs.js"></script>
 <script src="js/globalErrorHandler.js"></script>
-<script src="js/mediaUpload.js"></script> <!-- New module -->
+<script src="js/mediaUpload.js"></script>
+<script src="js/pluginManager.js"></script>
+<script src="js/samplePlugin.js"></script>
+<script src="js/roleBasedUI.js"></script>
+<script src="js/stagingArea.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

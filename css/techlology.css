@@ -876,3 +876,234 @@ ul.form-tabs li.active {
 .media-upload .upload-btn:hover {
   background: #333;
 }
+
+
+/* Global Layout: 3-Column Grid */
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 380px;
+  grid-gap: 0;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Sidebar: Left Column */
+.sidebar {
+  background: #2d2d2d;
+  color: #fff;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Main Workspace: Middle Column */
+.main {
+  padding: 20px;
+  background: #f5f5f5;
+  overflow-y: auto;
+}
+
+/* Media Panels: Right Column */
+.media-panels {
+  background: #1f222b;
+  padding: 15px;
+  border-left: 1px solid #333;
+  overflow-y: auto;
+}
+
+/* Staging Area: Article-Specific Media */
+#staging-area {
+  background: #252933;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  min-height: 150px;
+}
+#staging-area h3 {
+  margin: 0 0 10px;
+  text-align: center;
+  color: #fff;
+}
+
+/* Staging Area Items: Polaroid Style */
+.polaroid {
+  display: inline-block;
+  width: 80px;
+  background: #fff;
+  padding: 5px;
+  margin: 5px;
+  border: 1px solid #ddd;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  position: relative;
+}
+.polaroid img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.polaroid .caption {
+  font-size: 10px;
+  padding: 3px;
+  background: #f9f9f9;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-top: 1px solid #eee;
+}
+
+/* Global Media Library Items */
+#global-media {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.global-media-item {
+  width: 100px;
+  height: 100px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.global-media-item:hover {
+  transform: scale(1.05);
+}
+.global-media-item img {
+  width: 100%;
+  height: 70%;
+  object-fit: cover;
+  border-bottom: 1px solid #ccc;
+}
+.global-media-item .media-title {
+  font-size: 10px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  text-align: center;
+}
+.global-media-item .pin-button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: rgba(0,0,0,0.6);
+  border: none;
+  color: #ffb300;
+  font-size: 14px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+/* Media Panel Upload & Search */
+.media-search input,
+.media-upload .upload-btn {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Advanced Image Editor Modal */
+#cropper-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5000;
+}
+#cropper-area {
+  max-width: 80%;
+  max-height: 80%;
+  background: #000;
+  border: 2px solid #333;
+}
+#cropper-modal .cropper-controls {
+  margin-top: 10px;
+  background: #1f222b;
+  padding: 10px;
+  width: 80%;
+  border-radius: 4px;
+  color: #e1e1e1;
+}
+#cropper-modal h2 {
+  color: #fff;
+}
+.advanced-controls .slider-group {
+  margin-bottom: 8px;
+}
+.advanced-controls label {
+  color: #fff;
+  font-size: 12px;
+  display: block;
+}
+.advanced-controls input[type="range"] {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Preview Modal */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4000;
+}
+.preview-modal-content {
+  background: #1f222b;
+  padding: 20px;
+  border-radius: 6px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  position: relative;
+  color: #e1e1e1;
+}
+.preview-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  color: #fff;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0,0,0,0);
+  overflow: hidden;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  .sidebar, .media-panels {
+    position: static;
+    width: 100%;
+    height: auto;
+  }
+}
