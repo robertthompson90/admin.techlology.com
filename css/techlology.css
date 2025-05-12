@@ -1,1293 +1,196 @@
-/* =====================================================
-   RESET & BASE
-===================================================== */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: 'Segoe UI', sans-serif;
-  user-select: none;
-}
-input, textarea {
-  user-select: text;
-}
-body {
-  background-color: #0f1117;
-  color: #e1e1e1;
-}
+/* Reset & Base */
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',sans-serif;user-select:none}
+input,textarea{user-select:text}
+body{background-color:#0f1117;color:#e1e1e1}
 
-/* =====================================================
-   LAYOUT & GRID (3-Column Grid)
-===================================================== */
-.layout {
-  display: grid;
-  grid-template-columns: 220px 1fr minmax(550px, 2fr);
-  height: 100vh;
-  overflow: hidden;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-}
+/* Layout */
+.layout{display:grid;grid-template-columns:220px 1fr minmax(550px,2fr);height:100vh;overflow:hidden;font-family:'Helvetica Neue',Arial,sans-serif}
+.sidebar{background-color:#2d2d2d;color:#fff;padding:20px;overflow-y:auto}
+.sidebar-title{font-size:24px;font-weight:bold;margin-bottom:30px;text-align:center}
+.main{padding:20px;background:#0f1117;color:#e1e1e1;overflow-y:auto}
+.media-panels{background:#1f222b;padding:15px;border-left:1px solid #333;overflow-y:auto;color:#e1e1e1}
 
-/* =====================================================
-   SIDEBAR (Left Column)
-===================================================== */
-.sidebar {
-  background-color: #2d2d2d;
-  color: #fff;
-  padding: 20px;
-  overflow-y: auto;
-}
-.sidebar-title {
-  font-size: 24px;
-  color: #fff;
-  font-weight: bold;
-  margin-bottom: 30px;
-  text-align: center;
-}
+/* Navigation */
+.nav{list-style:none}
+.nav-item{padding:12px 20px;color:#ccc;cursor:pointer;border-radius:6px;transition:background .2s}
+.nav-item:hover,.nav-item.active{background:#2a2e3a;color:#fff}
+.nav-item a{color:inherit;text-decoration:none;display:block;width:100%;height:100%}
+.nav-item a.active{background-color:#333;color:#ffb300}
+.nav-item a.logout{color:#f44336}
 
-/* =====================================================
-   MAIN WORKSPACE (Middle Column)
-===================================================== */
-.main {
-  padding: 20px;
-  background: #0f1117; /* Dark background for night mode */
-  color: #e1e1e1;
-  overflow-y: auto;
-}
+/* Cards & Form Elements */
+.card{background:#1f222b;border-radius:12px;padding:20px;margin-bottom:20px;box-shadow:0 0 8px rgba(0,0,0,.4);color:#e1e1e1}
+.card h2{margin-top:0;font-size:1.2em}
+input[type="text"],input[type="url"],textarea,select{width:100%;padding:8px;margin-top:5px;margin-bottom:10px;border:1px solid #333;border-radius:4px;background-color:#0f1117;color:#e1e1e1}
+textarea{resize:vertical}
+label{display:block;margin-top:10px;margin-bottom:5px}
 
-/* =====================================================
-   MEDIA PANELS (Right Column)
-===================================================== */
-.media-panels {
-  background: #1f222b;
-  padding: 15px;
-  border-left: 1px solid #333;
-  overflow-y: auto;
-  color: #e1e1e1;
-}
-
-/* =====================================================
-   NAVIGATION
-===================================================== */
-.nav {
-  list-style: none;
-}
-.nav-item {
-  padding: 12px 20px;
-  color: #ccc;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
-.nav-item:hover,
-.nav-item.active {
-  background: #2a2e3a;
-  color: #fff;
-}
-.nav-item a {
-  color: inherit;
-  text-decoration: none;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.nav-item a.active {
-  background-color: #333;
-  color: #ffb300;
-}
-.nav-item a.logout {
-  color: #f44336;
-}
-
-/* =====================================================
-   CARDS & FORM ELEMENTS
-===================================================== */
-.card {
-  background: #1f222b;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 0 8px rgba(0,0,0,0.4);
-  color: #e1e1e1;
-}
-.card h2 {
-  margin-top: 0;
-  font-size: 1.2em;
-}
-input[type="text"],
-input[type="url"],
-textarea,
-select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
-  margin-bottom: 10px;
-  border: 1px solid #333;
-  border-radius: 4px;
-  background-color: #0f1117;
-  color: #e1e1e1;
-}
-textarea {
-  resize: vertical;
-}
-label {
-  display: block;
-  margin-top: 10px;
-  margin-bottom: 5px;
-}
-
-/* =====================================================
-   TAG SECTION
-===================================================== */
-#selected-tags {
-  margin-top: 10px;
-}
-.selected-tag {
-  display: inline-block;
-  background: #2a2e3a;
-  padding: 5px 8px;
-  border-radius: 4px;
-  color: #fff;
-  margin-right: 5px;
-  margin-bottom: 5px;
-}
-.selected-tag .remove-tag {
-  color: #f44336;
-  margin-left: 5px;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-/* =====================================================
-   DRAG HANDLE & PADLOCK (for Modular Sections)
-===================================================== */
-.drag-handle {
-  cursor: move;
-  font-size: 18px;
-  color: #aaa;
-  margin-right: 10px;
-}
-.padlock-icon {
-  font-size: 18px;
-  color: #aaa;
-  margin-left: auto;
-}
-
-/* =====================================================
-   MODULAR SECTIONS
-===================================================== */
-#sections-container .modular-section {
-  background: #252933;
-  border: 1px dashed #444;
-  border-radius: 6px;
-  padding: 10px;
-  margin-bottom: 15px;
-  position: relative;
-}
-#sections-container .modular-section h3 {
-  margin-bottom: 10px;
-}
-.remove-section-icon {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  color: #f44336;
-  font-size: 18px;
-  cursor: pointer;
-}
-.remove-section {
-  background: #f44336;
-  border: none;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-top: 10px;
-}
-/* For rating sections: hide drag handle and show padlock icon */
-#sections-container .rating-section .drag-handle {
-  display: none;
-}
-
-/* =====================================================
-   PROS & CONS
-===================================================== */
-.pros-cons-wrapper {
-  display: flex;
-  gap: 20px;
-}
-.pros-column,
-.cons-column {
-  flex: 1;
-}
-.pros-items,
-.cons-items {
-  border: 1px solid #333;
-  padding: 5px;
-  min-height: 30px;
-}
-.pros-item,
-.cons-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 5px;
-}
-.pros-item input,
-.cons-item input {
-  flex: 1;
-  padding: 5px;
-  margin-left: 5px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background: #0f1117;
-  color: #e1e1e1;
-}
-.pros-items.multiple .remove-pro,
-.cons-items.multiple .remove-cons {
-  display: inline-block;
-  color: #f44336;
-  cursor: pointer;
-  margin-right: 5px;
-}
-
-/* =====================================================
-   DROPZONE STYLES & IMAGE PREVIEW (for Gallery)
-===================================================== */
-.dropzone {
-  position: relative;
-  border: 2px dashed #888;
-  padding: 20px;
-  text-align: center;
-  margin-top: 10px;
-  cursor: pointer;
-}
-.dropzone:hover,
-.dropzone.dragover {
-  border-color: #007bff;
-  background: rgba(0,123,255,0.1);
-}
-.image-preview-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 10px auto 0;
-}
-.image-preview-container:empty {
-  display: none;
-}
-
-/* =====================================================
-   GALLERY SECTION
-===================================================== */
-.gallery-nav {
-  margin: 10px 0;
-  text-align: center;
-}
-.gallery-nav button {
-  background: #2a2e3a;
-  color: #fff;
-  border: none;
-  padding: 5px 10px;
-  margin: 0 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
-}
-.gallery-nav button:hover {
-  background: #333;
-}
-.dropzone.dropzone-gallery {
-  border: 2px dashed #555;
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
-  margin-bottom: 10px;
-}
-.dropzone.dropzone-gallery:hover,
-.dropzone.dropzone-gallery.dragover {
-  border-color: #007bff;
-  background: rgba(0,123,255,0.1);
-}
-.gallery-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  border: 1px solid #333;
-  padding: 10px;
-  margin-bottom: 10px;
-}
-.gallery-item {
-  background: #fff;
-  padding: 10px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-  border-radius: 4px;
-  width: 150px;
-  height: 150px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  overflow: hidden;
-  text-align: center;
-}
-.gallery-item:empty {
-  display: none;
-}
-.gallery-preview {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: #f0f0f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.gallery-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.ui-sortable-placeholder {
-  border: 1px dashed #aaa;
-  background: transparent !important;
-  visibility: visible !important;
-  width: 150px;
-  height: 150px;
-}
-
-/* =====================================================
-   RATING WIDGET
-===================================================== */
-.rating-widget {
-  display: inline-block;
-  margin-bottom: 10px;
-}
-.rating-widget .star {
-  font-size: 24px;
-  color: #aaa;
-  cursor: pointer;
-  margin-right: 5px;
-}
-.rating-widget .star.selected {
-  color: #ffb300;
-}
-
-/* =====================================================
-   BUTTON STYLING
-===================================================== */
-button,
-input[type="submit"] {
-  background: #2a2e3a;
-
-  color: #fff;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-button:hover,
-input[type="submit"]:hover {
-  background: #333;
-}
-.add-gallery-image {
-  background: #2a2e3a;
-  margin-top: 10px;
-}
-.remove-gallery-item,
-.remove-section,
-.remove-source,
-.remove-thumbnail,
-.remove-single-image,
-.remove-photo {
-  background: #f44336 !important;
-  color: #fff !important;
-  margin-top: 10px;
-}
-
-/* =====================================================
-   SOURCES MODULE
-===================================================== */
-.source {
-  background: #1f222b;
-  border: 1px solid #333;
-  padding: 10px;
-  margin-bottom: 10px;
-  border-radius: 4px;
-}
-.source label {
-  display: block;
-  margin-bottom: 4px;
-}
-.source input[type="text"],
-.source input[type="url"],
-.source textarea {
-  margin-bottom: 5px;
-}
-.source button.remove-source {
-  background: #f44336;
-  border: none;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-/* =====================================================
-   LIGHTBOX STYLING
-===================================================== */
-#lightbox-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  z-index: 3000;
-  align-items: center;
-  justify-content: center;
-}
-#lightbox-overlay.active {
-  display: flex;
-}
-#lightbox-content {
-  max-width: 90%;
-  max-height: 90%;
-}
-#lightbox-content img {
-  max-width: 100%;
-  max-height: 100%;
-  border: 5px solid #fff;
-  border-radius: 5px;
-}
-
-/* =====================================================
-   AUTOSAVE STATUS & VALIDATION FEEDBACK
-===================================================== */
-#autosave-status {
-  padding: 5px 10px;
-  background: #2a2e3a;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-top: 10px;
-}
-.input-error {
-  border-color: #f44336 !important;
-}
-.error-message {
-  color: #f44336;
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-/* =====================================================
-   PREVIEW MODAL
-===================================================== */
-.preview-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-.preview-modal-content {
-  background: #1f222b;
-  padding: 20px;
-  border-radius: 6px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-  color: #e1e1e1;
-  position: relative;
-}
-.preview-close {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  font-size: 24px;
-  color: #fff;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip: rect(0,0,0,0);
-  overflow: hidden;
-}
-
-/* =====================================================
-   SEGMENTED FORM NAVIGATION
-===================================================== */
-.form-step {
-  display: none;
-}
-.nav-buttons {
-  margin-top: 20px;
-  text-align: right;
-}
-.nav-buttons button {
-  background: #2a2e3a;
-  border: none;
-  color: #fff;
-  padding: 10px 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-.nav-buttons button:hover {
-  background: #333;
-}
-
-/* =====================================================
-   CROPPER MODAL & ACTION BUTTONS
-===================================================== */
-/* Full Screen Modal for Advanced Image Editor */
-#cropper-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85); /* Dims background with proper opacity */
-  z-index: 10000;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-/* Container for the cropping area within the modal */
-#cropper-area {
-  position: relative;
-  background: #fff;
-  margin: auto;
-  max-width: 1200px;
-  width: 90%;
-  padding: 15px;
-  border-radius: 4px;
-}
-
-/* The image to be edited */
-#cropper-image {
-  max-width: 100%;
-  display: block;
-  margin: 0 auto;
-}
-
-/* Live Preview Styling */
-#cropper-live-preview {
-  margin-top: 15px;
-  text-align: center;
-}
-
-/* Controls section */
-#cropper-controls {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.slider-group {
-  margin: 10px 0;
-}
-
-.slider-group label {
-  display: inline-block;
-  min-width: 75px;
-  color: #444;
-}
-
-.slider-group input[type="range"] {
-  width: 200px;
-  vertical-align: middle;
-}
+/* Tags */
+#selected-tags{margin-top:10px}
+.selected-tag{display:inline-block;background:#2a2e3a;padding:5px 8px;border-radius:4px;color:#fff;margin:0 5px 5px 0}
+.selected-tag .remove-tag{color:#f44336;margin-left:5px;text-decoration:none;cursor:pointer}
 
 /* Buttons */
-#cropper-save-new-image,
-#cropper-cancel-button {
-  margin: 10px 5px;
-  padding: 8px 16px;
-  font-size: 1em;
-  cursor: pointer;
+button,input[type="submit"]{background:#2a2e3a;color:#fff;border:none;padding:8px 12px;border-radius:4px;cursor:pointer;transition:background .2s}
+button:hover,input[type="submit"]:hover{background:#333}
+.add-gallery-image{background:#2a2e3a;margin-top:10px}
+.remove-gallery-item,.remove-section,.remove-source,.remove-thumbnail,.remove-single-image,.remove-photo{background:#f44336!important;color:#fff!important;margin-top:10px}
+
+/* Modular Sections */
+.drag-handle{cursor:move;font-size:18px;color:#aaa;margin-right:10px}
+.padlock-icon{font-size:18px;color:#aaa;margin-left:auto}
+#sections-container .modular-section{background:#252933;border:1px dashed #444;border-radius:6px;padding:10px;margin-bottom:15px;position:relative}
+#sections-container .modular-section h3{margin-bottom:10px}
+.remove-section-icon{position:absolute;top:10px;right:10px;color:#f44336;font-size:18px;cursor:pointer}
+.remove-section{background:#f44336;border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer;margin-top:10px}
+#sections-container .rating-section .drag-handle{display:none}
+
+/* Pros & Cons */
+.pros-cons-wrapper{display:flex;gap:20px}
+.pros-column,.cons-column{flex:1}
+.pros-items,.cons-items{border:1px solid #333;padding:5px;min-height:30px}
+.pros-item,.cons-item{display:flex;align-items:center;margin-bottom:5px}
+.pros-item input,.cons-item input{flex:1;padding:5px;margin-left:5px;border:1px solid #444;border-radius:4px;background:#0f1117;color:#e1e1e1}
+.pros-items.multiple .remove-pro,.cons-items.multiple .remove-cons{display:inline-block;color:#f44336;cursor:pointer;margin-right:5px}
+
+/* Rating Widget */
+.rating-widget{display:inline-block;margin-bottom:10px}
+.rating-widget .star{font-size:24px;color:#aaa;cursor:pointer;margin-right:5px}
+.rating-widget .star.selected{color:#ffb300}
+
+/* Sources Module */
+.source{background:#1f222b;border:1px solid #333;padding:10px;margin-bottom:10px;border-radius:4px}
+.source label{display:block;margin-bottom:4px}
+.source input[type="text"],.source input[type="url"],.source textarea{margin-bottom:5px}
+.source button.remove-source{background:#f44336;border:none;color:#fff;padding:4px 8px;border-radius:4px;cursor:pointer}
+
+/* Dropzone & Image Preview */
+.dropzone{position:relative;border:2px dashed #888;padding:20px;text-align:center;margin-top:10px;cursor:pointer}
+.dropzone:hover,.dropzone.dragover{border-color:#007bff;background:rgba(0,123,255,.1)}
+.image-preview-container{display:flex;align-items:center;justify-content:center;margin:10px auto 0}
+.image-preview-container:empty{display:none}
+
+/* Gallery Section */
+.gallery-nav{margin:10px 0;text-align:center}
+.gallery-nav button{background:#2a2e3a;color:#fff;border:none;padding:5px 10px;margin:0 10px;border-radius:4px;cursor:pointer;transition:background .2s,box-shadow .2s}
+.gallery-nav button:hover{background:#333}
+.dropzone.dropzone-gallery{border:2px dashed #555;padding:20px;text-align:center;cursor:pointer;margin-bottom:10px}
+.dropzone.dropzone-gallery:hover,.dropzone.dropzone-gallery.dragover{border-color:#007bff;background:rgba(0,123,255,.1)}
+.gallery-container{display:flex;flex-wrap:wrap;gap:10px;border:1px solid #333;padding:10px;margin-bottom:10px}
+.gallery-item{background:#fff;padding:10px;box-shadow:0 4px 6px rgba(0,0,0,.3);border-radius:4px;width:150px;height:150px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;overflow:hidden;text-align:center}
+.gallery-item:empty{display:none}
+.gallery-preview{width:100%;height:100%;overflow:hidden;background:#f0f0f0;display:flex;align-items:center;justify-content:center}
+.gallery-preview img{width:100%;height:100%;object-fit:contain}
+.ui-sortable-placeholder{border:1px dashed #aaa;background:transparent!important;visibility:visible!important;width:150px;height:150px}
+
+/* Lightbox */
+#lightbox-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:3000;align-items:center;justify-content:center}
+#lightbox-overlay.active{display:flex}
+#lightbox-content{max-width:90%;max-height:90%}
+#lightbox-content img{max-width:100%;max-height:100%;border:5px solid #fff;border-radius:5px}
+
+/* Status & Validation */
+#autosave-status{padding:5px 10px;background:#2a2e3a;border-radius:4px;font-size:14px;margin-top:10px}
+.input-error{border-color:#f44336!important}
+.error-message{color:#f44336;font-size:12px;margin-top:4px}
+
+/* Preview Modal */
+.preview-modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:2000}
+.preview-modal-content{background:#1f222b;padding:20px;border-radius:6px;max-width:90%;max-height:90%;overflow-y:auto;color:#e1e1e1;position:relative}
+.preview-close{position:absolute;top:10px;right:15px;font-size:24px;color:#fff;background:none;border:none;cursor:pointer}
+
+/* Form Navigation */
+.form-step{display:none}
+.nav-buttons{margin-top:20px;text-align:right}
+.nav-buttons button{background:#2a2e3a;border:none;color:#fff;padding:10px 20px;border-radius:4px;cursor:pointer;transition:background .3s ease}
+.nav-buttons button:hover{background:#333}
+
+/* Cropper */
+#cropper-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background-color:rgba(0,0,0,.85)!important;z-index:10000;overflow-y:auto;padding:20px}
+#cropper-area{position:relative;margin:0 auto;max-width:1200px;width:90%;background-color:#fff;padding:20px;border-radius:4px;box-shadow:0 0 20px rgba(0,0,0,.4)}
+#cropper-image{display:block;max-width:100%;margin:0 auto}
+#cropper-controls,#cropper-live-preview{margin-top:15px;text-align:center}
+.slider-group{margin:10px 0}
+.slider-group label{display:inline-block;min-width:75px;color:#444}
+.slider-group input[type="range"]{width:200px;vertical-align:middle}
+.action-buttons{text-align:center;margin:10px 0}
+.action-buttons button{background-color:#007bff;color:#fff;padding:10px 20px;border:none;border-radius:4px;margin:0 10px;cursor:pointer;font-size:16px;transition:background-color .2s ease}
+.action-buttons button:hover{background-color:#0056b3}
+.live-preview-wrapper{background-color:#222;padding:10px;border-radius:4px;margin-top:20px;text-align:center}
+.live-preview h3{color:#fff;margin-bottom:10px;font-size:18px}
+.cropper-container,.cropper-wrap-box,.cropper-canvas,.cropper-crop-box,.cropper-view-box,.cropper-drag-box{background:none!important;box-shadow:none!important;border:none!important}
+.cropper-crop-box{border:2px dashed #fff!important;background:transparent!important}
+.cropper-view-box,.cropper-drag-box{border:none!important;background:transparent!important}
+.cropper-modal,.cropper-modal *{opacity:1!important}
+.advanced-controls{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;padding:10px 0}
+.advanced-controls .slider-group{display:flex;flex-direction:column;align-items:center;margin:5px}
+.advanced-controls label{margin-bottom:5px;color:#fff;font-size:14px}
+
+/* Accessibility */
+.visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;clip:rect(0,0,0,0);overflow:hidden}
+
+/* Responsive */
+@media(max-width:768px){
+  .layout{grid-template-columns:1fr;grid-template-rows:auto auto auto}
+  .sidebar,.media-panels{position:static;width:100%;height:auto}
+  #cropper-area{width:95%;padding:10px}
+  .slider-group input[type="range"]{width:150px}
 }
 
-
-/* =====================================================
-   PART 5: ADVANCED CROPPER MODAL & PREVIEW MODAL
-===================================================== */
-.cropper-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.85);
+/* Revised Polaroid Styling for a Vertical Layout */
+.polaroid {
+  background: #2b2e36;              /* a dark, neutral background */
+  border: 1px solid #444;           /* subtle border */
+  border-radius: 8px;               /* softly rounded corners */
+  padding: 8px;
+  width: 160px;                     /* fixed width to ensure consistency */
+  margin: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.5); /* modest shadow for depth */
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  z-index: 5000;
+  box-sizing: border-box;
 }
-.cropper-area {
-  max-width: 80%;
-  max-height: 80%;
-  background: #000;
-  border: 2px solid #333;
-}
-.cropper-controls {
-  margin-top: 10px;
-  background: #1f222b;
-  padding: 10px;
-  width: 80%;
-  border-radius: 4px;
-  color: #e1e1e1;
-}
-.advanced-controls .slider-group {
+
+.polaroid .polaroid-image {
+  width: 100%;
   margin-bottom: 8px;
 }
-.advanced-controls label {
-  color: #fff;
-  font-size: 12px;
+
+.polaroid .polaroid-image img {
+  width: 100%;                      /* image scales to the container width */
+  height: auto;
+  border-radius: 4px;               /* slight rounding for the image */
+  object-fit: contain;
   display: block;
 }
-.advanced-controls input[type="range"] {
+
+.polaroid .polaroid-caption {
   width: 100%;
-  margin-top: 4px;
-}
-.preview-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 4000;
-}
-.preview-modal-content {
-  background: #1f222b;
-  padding: 20px;
-  border-radius: 6px;
-  max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
+  border: 1px solid #444;
+  background: #2b2e36;
   color: #e1e1e1;
-  position: relative;
+  font-size: 13px;
+  padding: 4px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
 }
-.preview-close {
-  position: absolute;
-  top: 10px;
-  right: 15px;
-  background: none;
+
+.polaroid .remove-photo {
+  background: #f44336;
   border: none;
-  font-size: 24px;
   color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
   cursor: pointer;
-}
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  clip: rect(0,0,0,0);
-  overflow: hidden;
-}
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
-  }
-  .sidebar, .media-panels {
-    position: static;
-    width: 100%;
-    height: auto;
-  }
-	 #cropper-area {
-    width: 95%;
-    padding: 10px;
-  }
-  .slider-group input[type="range"] {
-    width: 150px;
-  }
-}
-
-
-/* Override default Cropper overlays to ensure full opacity */
-.cropper-view-box,
-.cropper-face,
-.cropper-crop-box {
-  opacity: 1 !important;
-}
-
-
-/* Full-screen Advanced Image Editor */
-#cropper-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
   width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.85); /* proper dimming */
-  z-index: 10000;
-  overflow-y: auto;
-  padding: 20px;
+  transition: background 0.2s ease;
+  box-sizing: border-box;
+  /* Note: Removed absolute positioning so it appears below the caption */
 }
 
-#cropper-area {
-  position: relative;
-  margin: auto;
-  max-width: 1200px;
-  width: 90%;
-  background: #fff;
-  padding: 15px;
-  border-radius: 4px;
-}
-
-#cropper-image {
-  display: block;
-  max-width: 100%;
-  margin: 0 auto;
-}
-
-/* Ensure sliders and preview area are spaced out properly */
-#cropper-controls, #cropper-live-preview {
-  margin-top: 15px;
-  text-align: center;
-}
-
-
-.cropper-modal {
-    opacity: 1 !important;
-    background-color: rgba(0, 0, 0, 0.85) !important; /* if you want a dimming effect */
-}
-
-
-/* Override Cropper’s default opacity settings */
-.cropper-modal,
-.cropper-modal * {
-  opacity: 1 !important;
-}
-
-/* Full-screen modal container override */
-#cropper-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.85) !important; /* Dark overlay with proper dimming */
-  z-index: 10000;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-/* Container for the cropping interface */
-#cropper-area {
-  background: #fff;
-  margin: auto;
-  max-width: 1200px;
-  width: 90%;
-  padding: 15px;
-  border-radius: 4px;
-  position: relative;
-}
-
-/* Image styling within the cropping area */
-#cropper-image {
-  display: block;
-  max-width: 100%;
-  margin: 0 auto;
-}
-
-/* Styling for the controls and live preview */
-#cropper-controls, #cropper-live-preview {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.slider-group {
-  margin: 10px 0;
-}
-
-.slider-group label {
-  display: inline-block;
-  min-width: 75px;
-  color: #444;
-}
-
-.slider-group input[type="range"] {
-  width: 200px;
-  vertical-align: middle;
-}
-
-
-/* Override any Cropper defaults affecting opacity */
-.cropper-modal,
-.cropper-modal * {
-  opacity: 1 !important;
-}
-
-/* Full-screen advanced editor modal */
-#cropper-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.85) !important;
-  z-index: 10000;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-/* Main cropping container */
-#cropper-area {
-  background: #fff;
-  margin: auto;
-  max-width: 1200px;
-  width: 90%;
-  padding: 15px;
-  border-radius: 4px;
-  position: relative;
-}
-
-/* Ensure the image is centered and contained */
-#cropper-image {
-  display: block;
-  max-width: 100%;
-  margin: 0 auto;
-}
-
-/* Controls and live preview styling */
-#cropper-controls,
-#cropper-live-preview {
-  margin-top: 15px;
-  text-align: center;
-}
-
-.slider-group {
-  margin: 10px 0;
-}
-
-.slider-group label {
-  display: inline-block;
-  min-width: 75px;
-  color: #444;
-}
-
-.slider-group input[type="range"] {
-  width: 200px;
-  vertical-align: middle;
-}
-
-
-/* ========================================================================
-   Advanced Image Editor Modal & Overrides
-   ======================================================================== */
-
-/* Full-screen modal container */
-#cropper-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.85); /* Dark overlay */
-  z-index: 10000;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-/* Main cropping area container */
-#cropper-area {
-  margin: 0 auto;
-  max-width: 1200px;
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 4px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-}
-
-/* The original image element (Cropper.js will clone it) */
-#cropper-image {
-  max-width: 100%;
-  display: block;
-  margin: 0 auto;
-}
-
-/* Ensure any Cropper.js generated container stays within bounds */
-.cropper-container {
-  margin: 0 auto;
-  max-width: 100%;
-}
-
-/* Controls container for advanced editor */
-.cropper-controls {
-  margin-top: 20px;
-  padding: 10px;
-  background-color: #333;
-  color: #fff;
-  border-radius: 0 0 4px 4px;
-}
-
-/* Visually hidden headline for accessibility */
-.cropper-controls h2.visually-hidden {
-  position: absolute;
-  clip: rect(0 0 0 0);
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-}
-
-/* Container for slider controls */
-.advanced-controls {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-  padding: 10px 0;
-}
-
-/* Slider group styling */
-.slider-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 5px;
-}
-.slider-group label {
-  margin-bottom: 5px;
-  color: #fff;
-  font-size: 14px;
-}
-.slider-group input[type="range"] {
-  width: 200px;
-}
-
-/* Action buttons styling */
-.action-buttons {
-  text-align: center;
-  margin: 10px 0;
-}
-.action-buttons button {
-  background-color: #007bff;
-  color: #fff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  margin: 0 10px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s ease;
-}
-.action-buttons button:hover {
-  background-color: #0056b3;
-}
-
-/* Live preview area styling */
-.live-preview-wrapper {
-  background-color: #222;
-  padding: 10px;
-  border-radius: 4px;
-  margin-top: 20px;
-  text-align: center;
-}
-.live-preview h3 {
-  color: #fff;
-  margin-bottom: 10px;
-  font-size: 18px;
-}
-
-/* ------------------------------------------------------------------------
-   Override Cropper.js default opacity (force full opacity)
-   ------------------------------------------------------------------------ */
-.cropper-modal,
-.cropper-modal * {
-  opacity: 1 !important;
-}
-
-
-/* --- Advanced Image Editor Overrides --- */
-
-/* Full-screen modal container */
-#cropper-modal {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.85); /* Dark overlay */
-  z-index: 10000;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-/* Main cropping area container */
-#cropper-area {
-  margin: 0 auto;
-  max-width: 1200px;
-  width: 90%;
-  background-color: #fff;
-  padding: 20px;
-  border-radius: 4px;
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
-}
-
-/* Ensure the original image is shown (Cropper.js clones it for interaction) */
-#cropper-image {
-  max-width: 100%;
-  display: block;
-  margin: 0 auto;
-}
-
-/* Override Cropper-generated elements */
-.cropper-container {
-  margin: 0 auto;
-  max-width: 100%;
-}
-
-/* Style the cropping box */
-.cropper-crop-box {
-  border: 2px dashed #fff !important;
-  background: transparent !important;
-  /* Remove any unwanted box-shadows */
-  box-shadow: none !important;
-}
-
-/* Additionally, if necessary, adjust the view box */
-.cropper-view-box {
-  border: none !important;
-}
-
-/* Optional: style the drag box if visible */
-.cropper-drag-box {
-  border: 2px solid rgba(255, 255, 255, 0.5) !important;
-}
-
-/* Controls container for the advanced editor: */
-.cropper-controls {
-  margin-top: 20px;
-  padding: 10px;
-  background-color: #333;
-  color: #fff;
-  border-radius: 0 0 4px 4px;
-}
-
-/* Container for slider controls */
-.advanced-controls {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-  padding: 10px 0;
-}
-
-/* Slider group styling */
-.slider-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 5px;
-}
-.slider-group label {
-  margin-bottom: 5px;
-  color: #fff;
-  font-size: 14px;
-}
-.slider-group input[type="range"] {
-  width: 200px;
-}
-
-/* Action buttons styling */
-.action-buttons {
-  text-align: center;
-  margin: 10px 0;
-}
-.action-buttons button {
-  background-color: #007bff;
-  color: #fff;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  margin: 0 10px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.2s ease;
-}
-.action-buttons button:hover {
-  background-color: #0056b3;
-}
-
-/* Live preview area styling */
-.live-preview-wrapper {
-  background-color: #222;
-  padding: 10px;
-  border-radius: 4px;
-  margin-top: 20px;
-  text-align: center;
-}
-.live-preview h3 {
-  color: #fff;
-  margin-bottom: 10px;
-  font-size: 18px;
-}
-
-/* ------------------------------------------------------------------------
-   Override Cropper.js defaults (force full opacity, etc.)
-   ------------------------------------------------------------------------ */
-.cropper-modal,
-.cropper-modal * {
-  opacity: 1 !important;
-}
-
-
-/* =========================================================================
-   Integrated Advanced Image Editor CSS
-   ========================================================================= */
-
-/* Full-screen modal container with our desired background and no flicker */
-#cropper-modal {
-  position: fixed !important;
-  top: 0;
-  left: 0;
-  width: 100% !important;
-  height: 100% !important;
-  background-color: rgba(0, 0, 0, 0.85) !important;
-  z-index: 10000 !important;
-  overflow-y: auto !important;
-  padding: 20px !important;
-}
-
-/* Centered cropping area container */
-#cropper-area {
-  margin: 0 auto !important;
-  max-width: 1200px !important;
-  width: 90% !important;
-  background-color: #fff !important;
-  padding: 20px !important;
-  border-radius: 4px !important;
-  box-shadow: 0 0 20px rgba(0,0,0,0.4) !important;
-}
-
-/* Original image styling – even though Cropper clones it, keep the original clean */
-#cropper-image {
-  max-width: 100% !important;
-  display: block !important;
-  margin: 0 auto !important;
-}
-
-/* Force Cropper-generated elements to follow our style rules */
-.cropper-container,
-.cropper-wrap-box,
-.cropper-canvas,
-.cropper-crop-box,
-.cropper-view-box,
-.cropper-drag-box {
-  background: none !important;
-  box-shadow: none !important;
-  border: none !important;
-}
-
-/* Styling for the cropping box itself */
-.cropper-crop-box {
-  border: 2px dashed #fff !important;
-  background: transparent !important;
-}
-
-/* Remove extra borders or shadows on view boxes and drag boxes */
-.cropper-view-box,
-.cropper-drag-box {
-  border: none !important;
-  background: transparent !important;
-}
-
-/* Advanced editor controls container */
-.cropper-controls {
-  margin-top: 20px !important;
-  padding: 10px !important;
-  background-color: #333 !important;
-  color: #fff !important;
-  border-radius: 0 0 4px 4px !important;
-}
-
-/* Layout for slider controls */
-.advanced-controls {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  justify-content: center !important;
-  gap: 20px !important;
-  padding: 10px 0 !important;
-}
-.slider-group {
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  margin: 5px;
-}
-.slider-group label {
-  margin-bottom: 5px !important;
-  color: #fff !important;
-  font-size: 14px !important;
-}
-.slider-group input[type="range"] {
-  width: 200px !important;
-}
-
-/* Styling for action buttons */
-.action-buttons {
-  text-align: center !important;
-  margin: 10px 0 !important;
-}
-.action-buttons button {
-  background-color: #007bff !important;
-  color: #fff !important;
-  padding: 10px 20px !important;
-  border: none !important;
-  border-radius: 4px !important;
-  margin: 0 10px !important;
-  cursor: pointer !important;
-  font-size: 16px !important;
-  transition: background-color 0.2s ease !important;
-}
-.action-buttons button:hover {
-  background-color: #0056b3 !important;
-}
-
-/* Live preview area styling */
-.live-preview-wrapper {
-  background-color: #222 !important;
-  padding: 10px !important;
-  border-radius: 4px !important;
-  margin-top: 20px !important;
-  text-align: center !important;
-}
-.live-preview h3 {
-  color: #fff !important;
-  margin-bottom: 10px !important;
-  font-size: 18px !important;
-}
-
-/* Guarantee full opacity for our UI elements */
-.cropper-modal,
-.cropper-modal * {
-  opacity: 1 !important;
+.polaroid .remove-photo:hover {
+  background: #d32f2f;
 }

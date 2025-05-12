@@ -72,22 +72,34 @@ var Sections = (function(){
         html += '<textarea name="section_text[]" placeholder="Enter text content...">' + (defaults.content || '') + '</textarea>';
         break;
       case IMAGE_SECTION:
-        html += '<h3>Image</h3>';
-        html += '<div class="dropzone dropzone-image"><p>Drag &amp; drop your image here or click to upload</p>';
-        html += '<input type="file" accept="image/*" name="section_image_file[]" class="hidden-file-input"></div>';
-        html += '<div class="image-preview-container"></div>';
-        html += '<input type="text" name="section_image_caption[]" placeholder="Enter caption (optional)" value="' + (defaults.caption || '') + '">';
-        break;
+			html += '<h3>Image</h3>';
+			html += '<div class="dropzone dropzone-image"><p>Drag &amp; drop your image here or click to upload</p>';
+			html += '<input type="file" accept="image/*" name="section_image_file[]" class="hidden-file-input"></div>';
+			html += '<div class="image-preview-container">';
+			if(defaults.croppedData) {
+				var decodedImage = decodeURIComponent(defaults.croppedData);
+				html += renderPolaroid(decodedImage, "image");
+			}
+			html += '</div>';
+			html += '<input type="text" name="section_image_caption[]" placeholder="Enter caption (optional)" value="' + (defaults.caption || '') + '">';
+			html += '<input type="hidden" name="cropped_image_data[]" value="' + (defaults.croppedData || '') + '">';
+			break;
       case VIDEO_SECTION:
         html += '<h3>Video</h3>';
         html += '<input type="text" name="section_video[]" placeholder="Enter video URL" value="' + (defaults.content || '') + '">';
         break;
       case GALLERY_SECTION:
-        html += '<h3>Gallery</h3>';
-        html += '<div class="dropzone dropzone-gallery"><p>Drag &amp; drop gallery images here or click to upload</p>';
-        html += '<input type="file" accept="image/*" name="section_gallery_file[]" multiple class="hidden-file-input"></div>';
-        html += '<div class="gallery-container"></div>';
-        break;
+				html += '<h3>Gallery</h3>';
+				html += '<div class="dropzone dropzone-gallery"><p>Drag &amp; drop gallery images here or click to upload</p>';
+				html += '<input type="file" accept="image/*" name="section_gallery_file[]" multiple class="hidden-file-input"></div>';
+				html += '<div class="gallery-container">';
+				if(defaults.galleryHTML) {
+					html += defaults.galleryHTML;
+				}
+				html += '</div>';
+				// Remove the extra hidden input. We’re capturing the gallery's HTML directly.
+				// html += '<input type="hidden" name="gallery_data[]" value="' + (defaults.galleryHTML ? encodeURIComponent(defaults.galleryHTML) : '') + '">';
+				break;
       case QUOTE_SECTION:
         html += '<h3>Quote</h3>';
         html += '<textarea name="section_quote[]" placeholder="Enter the quote...">' + (defaults.content || '') + '</textarea>';

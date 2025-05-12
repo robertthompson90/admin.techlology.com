@@ -48,6 +48,7 @@ var Autosave = (function(){
     var state = {
       title: $('#title').val(),
       tagline: $('#tagline').val(),
+		 	thumbnail: $("input[name='thumbnail_cropped_data']").val() || "",
       seo_title: $('#seo_title').val(),
       meta_description: $('#meta_description').val(),
       sections: []  // To store dynamic sections
@@ -71,13 +72,15 @@ var Autosave = (function(){
         case IMAGE_SECTION:
           // For images, capture the caption; you might capture other data (like URLs) if needed.
           extra.caption = $section.find("input[name='section_image_caption[]']").val() || "";
+					// Capture the cropped image data stored in a hidden input.
+				  extra.croppedData = $section.find("input[name='cropped_image_data[]']").val() || "";
           break;
         case VIDEO_SECTION:
           content = $section.find("input[name='section_video[]']").val() || "";
           break;
         case GALLERY_SECTION:
-          // For galleries, capture the innerHTML of the gallery container.
-          extra.galleryHTML = $section.find(".gallery-container").html() || "";
+					// For galleries, capture the innerHTML of the gallery container.
+					extra.galleryHTML = $section.find(".gallery-container").html() || "";
           break;
         case QUOTE_SECTION:
           content = $section.find("textarea[name='section_quote[]']").val() || "";
@@ -133,7 +136,19 @@ var Autosave = (function(){
     $('#tagline').val(state.tagline);
     $('#seo_title').val(state.seo_title);
     $('#meta_description').val(state.meta_description);
-    
+    // Restore thumbnail image preview if present
+		if(state.thumbnail) {
+			var decodedThumbnail = decodeURIComponent(state.thumbnail);
+			// Assume you have a function to render a thumbnail in polaroid style.
+			$(".thumbnail-preview").html(Sections.renderPolaroid(decodedThumbnail, "thumbnail"));
+			// Also, restore the hidden value.
+			if($("input[name='thumbnail_cropped_data']").length === 0) {
+				$(".thumbnail-preview").after('<input type="hidden" name="thumbnail_cropped_data" value="'+ state.thumbnail +'">');
+			} else {
+				$("input[name='thumbnail_cropped_data']").val(state.thumbnail);
+			}
+		}
+		
     // Clear the dynamic sections container.
     $("#sections-container").empty();
     

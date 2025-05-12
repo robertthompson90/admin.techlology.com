@@ -35,8 +35,10 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   <div class="main">
     <h1>Add New Article</h1>
     <div id="autosave-status" style="margin-bottom:10px; font-style:italic; color:#aaa;">Autosave status...</div>
-    <button id="undo-button" disabled>Undo</button>
-    <button id="redo-button" disabled>Redo</button>
+    <div class="undo-redo-controls">
+			<button type="button" id="undo-button" class="btn btn-undo">Undo</button>
+			<button type="button" id="redo-button" class="btn btn-redo">Redo</button>
+		</div>
     <form action="addarticlepost.php" method="post" enctype="multipart/form-data" id="article-form">
       
       <!-- Step 1: Fixed Information, Thumbnail, Tags, SEO -->
@@ -53,6 +55,7 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
             <input type="file" name="thumbnail" accept="image/*" class="hidden-file-input">
           </div>
           <div class="thumbnail-preview"></div>
+					<input type="hidden" name="thumbnail_cropped_data" value="">
         </div>
         <div class="card">
           <h2>Tags</h2>
@@ -132,20 +135,19 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   
   <!-- Right Column: Media Panels -->
   <div class="media-panels">
-    <div id="staging-area">
-      <h3>Staging Area</h3>
-      <div id="staging-media">
-        <!-- Staging media items (polaroid style) are inserted here by JS -->
-      </div>
-      <!-- (Temporary trigger for advanced image editor demo) -->
-      <button type="button" id="some-open-editor-button">Open Advanced Editor</button>
-    </div>
-    <div id="global-media-library">
-      <h3>Global Media Library</h3>
-      <div id="global-media">
-        <!-- Global media assets will load here -->
-      </div>
-    </div>
+    <div id="staging-area" class="dropzone dropzone-staging">
+			<h3>Staging Area</h3>
+			<div id="staging-media">
+				<!-- Staging media items (polaroid style) are inserted here -->
+			</div>
+			<button type="button" id="some-open-editor-button">Open Advanced Editor</button>
+		</div>
+    <div id="global-media-library" class="dropzone dropzone-global-media">
+			<h3>Global Media Library</h3>
+			<div id="global-media">
+				<!-- Global media assets will load here -->
+			</div>
+		</div>
   </div>
 </div>
 <!-- End .layout -->
