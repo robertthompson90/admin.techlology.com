@@ -44,28 +44,32 @@ const UnifiedImageEditor = (() => {
    * Updates the live preview element by applying CSS filters.
    */
   const updateLivePreview = () => {
-    const filterStr = `brightness(${currentFilters.brightness}%) contrast(${currentFilters.contrast}%) ` +
-                      `saturate(${currentFilters.saturation}%) hue-rotate(${currentFilters.hue}deg)`;
-    $('#cropper-live-preview').css('filter', filterStr);
+    const filterStr = `brightness(${currentFilters.brightness}%) contrast(${currentFilters.contrast}%) saturate(${currentFilters.saturation}%) hue-rotate(${currentFilters.hue}deg)`;
+		$('#cropper-live-preview, #cropper-image').css('filter', filterStr);
   };
 
   /**
    * Binds slider events to update filter values.
    */
   const bindFilterControls = () => {
+		console.log("Filter controls bound");
     $('#brightness-slider').on('input', function () {
+			console.log("Brightness slider changed:", this.value);
       currentFilters.brightness = parseInt(this.value, 10);
       updateLivePreview();
     });
     $('#contrast-slider').on('input', function () {
+			console.log("Contrast slider changed:", this.value);
       currentFilters.contrast = parseInt(this.value, 10);
       updateLivePreview();
     });
     $('#saturation-slider').on('input', function () {
+			console.log("Saturation slider changed:", this.value);
       currentFilters.saturation = parseInt(this.value, 10);
       updateLivePreview();
     });
     $('#hue-slider').on('input', function () {
+			console.log("Hue slider changed:", this.value);
       currentFilters.hue = parseInt(this.value, 10);
       updateLivePreview();
     });

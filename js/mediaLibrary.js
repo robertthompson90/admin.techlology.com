@@ -71,13 +71,22 @@ var MediaLibrary = (function(){
         
         $item.append($img).append($pin).append($title);
         
-        // When the media item is double-clicked, open the full-screen editor.
-        $item.on("dblclick", function(){
-          ImageEditor.openEditor($(this).find("img").attr("src"), function(croppedDataUrl){
-            $("#staging-media").append("<img src='" + croppedDataUrl + "' alt='Cropped Image'>");
-            Notifications.show("Image cropped and inserted", "success");
-          });
-        });
+        /// When the media item is double-clicked, open the full-screen editor.
+				$item.on("dblclick", function(){
+					const imageUrl = $(this).find("img").attr("src");
+					console.log("Double-click detected on media item, image URL:", imageUrl);
+					
+					if (imageUrl) {
+						UnifiedImageEditor.openEditor(imageUrl, (editedDataURL) => {
+							console.log("Unified editor returned data URL:", editedDataURL);
+							// Example: Update the staging area with the new image:
+							// Pass along appropriate mediaId and editMetaData if available.
+							StagingArea.addMediaToStaging(editedDataURL, "tempMediaId", { edited: true });
+						});
+					} else {
+						console.warn("No image URL found for this media item.");
+					}
+				});
         
         $globalMedia.append($item);
       });

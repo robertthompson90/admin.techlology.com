@@ -20,7 +20,7 @@ var StagingArea = (function(){
     var $caption = $("<div>").addClass("caption").text("Double-click to edit caption");
     $polaroid.append($img).append($caption);
     $("#staging-media").append($polaroid);
-    UndoRedo.saveState();
+    UndoRedo.pushState();
   }
   
   function init() {
@@ -28,11 +28,11 @@ var StagingArea = (function(){
       placeholder: "staging-placeholder",
       tolerance: "pointer",
       update: function(){
-        UndoRedo.saveState();
+        UndoRedo.pushState();
         Notifications.show("Staging order updated", "info");
       }
     });
-    UndoRedo.saveState();
+    UndoRedo.pushState();
     
     $("#staging-media").on("dblclick", ".polaroid .caption", function(){
       $(this).attr("contenteditable", "true").addClass("editing").focus();
@@ -52,7 +52,7 @@ var StagingArea = (function(){
                 if (confirm("Are you sure you want to remove this media item?")) {
                     $item.fadeOut(200, function(){
                         $(this).remove();
-                        UndoRedo.saveState();
+                        UndoRedo.pushState();
                         Notifications.show("Media item removed from staging", "info");
                     });
                 }

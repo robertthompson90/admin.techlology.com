@@ -35,7 +35,8 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   <div class="main">
     <h1>Add New Article</h1>
     <div id="autosave-status" style="margin-bottom:10px; font-style:italic; color:#aaa;">Autosave status...</div>
-    
+    <button id="undo-button" disabled>Undo</button>
+    <button id="redo-button" disabled>Redo</button>
     <form action="addarticlepost.php" method="post" enctype="multipart/form-data" id="article-form">
       
       <!-- Step 1: Fixed Information, Thumbnail, Tags, SEO -->
@@ -149,45 +150,41 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 </div>
 <!-- End .layout -->
 
-<!-- Advanced Cropper Modal for Image Editing -->
-<div id="cropper-modal" class="cropper-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="cropper-modal-title">
-  <div id="cropper-area" class="cropper-area">
+<!-- Cropper Modal -->
+<div id="cropper-modal" class="cropper-modal" style="display: none;">
+  <div class="cropper-area">
     <img id="cropper-image" src="" alt="Crop your image">
   </div>
-  <div id="cropper-controls" class="cropper-controls">
-    <h2 id="cropper-modal-title" class="visually-hidden">Advanced Image Editor</h2>
-    <div class="advanced-controls">
-      <div class="slider-group">
-				<label for="brightness-slider">Brightness</label>
-				<!-- Here 100 is neutral for brightness -->
-				<input type="range" id="brightness-slider" min="50" max="150" value="100">
-			</div>
-			<div class="slider-group">
-				<label for="contrast-slider">Contrast</label>
-				<input type="range" id="contrast-slider" min="50" max="150" value="100">
-			</div>
-			<div class="slider-group">
-				<label for="saturation-slider">Saturation</label>
-				<input type="range" id="saturation-slider" min="50" max="150" value="100">
-			</div>
-			<div class="slider-group">
-				<label for="hue-slider">Hue</label>
-				<input type="range" id="hue-slider" min="0" max="360" value="0">
-			</div>
+  <div class="cropper-controls">
+    <div class="slider-group">
+      <label for="brightness-slider">Brightness</label>
+      <input type="range" id="brightness-slider" min="50" max="150" value="100">
+    </div>
+    <div class="slider-group">
+      <label for="contrast-slider">Contrast</label>
+      <input type="range" id="contrast-slider" min="50" max="150" value="100">
+    </div>
+    <div class="slider-group">
+      <label for="saturation-slider">Saturation</label>
+      <input type="range" id="saturation-slider" min="50" max="150" value="100">
+    </div>
+    <div class="slider-group">
+      <label for="hue-slider">Hue</label>
+      <input type="range" id="hue-slider" min="0" max="360" value="0">
     </div>
     <div class="action-buttons">
       <button type="button" id="cropper-crop-button">Crop</button>
       <button type="button" id="cropper-save-new-image">Save New Image</button>
       <button type="button" id="cropper-cancel-button">Cancel</button>
+      <!-- Optional Zoom/Reset Controls -->
+      <button type="button" id="cropper-zoom-in">Zoom In</button>
+      <button type="button" id="cropper-zoom-out">Zoom Out</button>
+      <button type="button" id="cropper-reset">Reset</button>
     </div>
-    <div class="live-preview-wrapper">
-      <div class="live-preview">
-        <h3>Live Preview</h3>
-        <div id="cropper-live-preview"></div>
-      </div>
-    </div>
+    <div id="cropper-live-preview" class="live-preview"></div>
   </div>
 </div>
+
 
 <!-- Preview Modal for Live Article Preview -->
 <div id="preview-modal" class="preview-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
@@ -202,43 +199,22 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 
 <!-- Script Inclusions -->
 <script src="js/sections.js"></script>
-<script src="js/imageEditor.js"></script>
-<script src="js/advancedImageEditor.js"></script>
 <script src="js/dropzones.js"></script>
 <script src="js/tags.js"></script>
 <script src="js/sources.js"></script>
 <script src="js/lightbox.js"></script>
 <script src="js/notifications.js"></script>
+<script src="js/UnifiedImageEditor.js"></script>
 <script src="js/autosave.js"></script>
 <script src="js/validation.js"></script>
 <script src="js/preview.js"></script>
-<script src="js/segmented.js"></script>
 <script src="js/keyboard.js"></script>
 <script src="js/mediaLibrary.js"></script>
-<script src="js/formTabs.js"></script>
+<script src="js/formNavigation.js"></script>
 <script src="js/globalErrorHandler.js"></script>
 <script src="js/mediaUpload.js"></script>
 <script src="js/undoRedo.js"></script>
 <script src="js/stagingArea.js"></script>
 <script src="js/app.js"></script>
-<script>
-// Attach a handler for double-click on media items in the media library.
-$(document).on("dblclick", ".global-media-item", function(){
-  // Extract the image URL from the child <img> element.
-  var imageUrl = $(this).find("img").attr("src");
-  
-  // Log for debugging purposes.
-  console.log("Double-click detected on global media item, image URL:", imageUrl);
-  
-  // Check that a URL was found.
-  if (imageUrl) {
-    AdvancedImageEditor.openEditor(imageUrl, function(){
-      console.log("Advanced Image Editor opened successfully for:", imageUrl);
-    });
-  } else {
-    console.warn("No image URL found for this media item.");
-  }
-});
-</script>
 </body>
 </html>

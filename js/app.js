@@ -10,15 +10,12 @@ $(document).ready(function(){
   Lightbox.init();
   Autosave.init();
   Preview.init();
-  FormNavigation.init();
   KeyboardShortcuts.init();
   MediaLibrary.init();
-  if (AdvancedImageEditor.init) AdvancedImageEditor.init();
-  if (ImageEditor.init) ImageEditor.init();
-  FormTabs.init();
+  FormNavigation.init();
   MediaUpload.init();
   StagingArea.init();   // Moved before UndoRedo.saveState()
-  UndoRedo.saveState();
+  UndoRedo.init();
   
   Notifications.show("Application initialized", "success");
 

@@ -1166,7 +1166,6 @@ input[type="submit"]:hover {
 
 /* Full-screen modal container with our desired background and no flicker */
 #cropper-modal {
-  display: none !important;
   position: fixed !important;
   top: 0;
   left: 0;
