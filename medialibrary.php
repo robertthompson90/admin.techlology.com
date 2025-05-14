@@ -47,39 +47,5 @@ include 'inc/loginanddb.php';
     </div>
   </div>
   <!-- End .layout -->
-  
-  <!-- Cropper Modal (shared with addarticle.php for image editing) -->
-  <div id="cropper-modal" class="cropper-modal" style="display: none;">
-    <div class="cropper-area">
-      <img id="cropper-image" src="" alt="Crop your image">
-    </div>
-    <div class="cropper-controls">
-      <div class="slider-group">
-        <label for="brightness-slider">Brightness</label>
-        <input type="range" id="brightness-slider" min="50" max="150" value="100">
-      </div>
-      <div class="slider-group">
-        <label for="contrast-slider">Contrast</label>
-        <input type="range" id="contrast-slider" min="50" max="150" value="100">
-      </div>
-      <div class="slider-group">
-        <label for="saturation-slider">Saturation</label>
-        <input type="range" id="saturation-slider" min="50" max="150" value="100">
-      </div>
-      <div class="slider-group">
-        <label for="hue-slider">Hue</label>
-        <input type="range" id="hue-slider" min="0" max="360" value="0">
-      </div>
-      <div class="action-buttons">
-        <button type="button" id="cropper-crop-button">Crop</button>
-        <button type="button" id="cropper-save-new-image">Save New Image</button>
-        <button type="button" id="cropper-cancel-button">Cancel</button>
-        <button type="button" id="cropper-zoom-in">Zoom In</button>
-        <button type="button" id="cropper-zoom-out">Zoom Out</button>
-        <button type="button" id="cropper-reset">Reset</button>
-      </div>
-      <div id="cropper-live-preview" class="live-preview"></div>
-    </div>
-  </div>
 </body>
 </html>

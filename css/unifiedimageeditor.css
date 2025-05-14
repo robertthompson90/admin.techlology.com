@@ -27,33 +27,50 @@
 
 /* Main Title Module (Overall Header) */
 .uie-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  position: relative;
   padding: 8px 12px;
   background: #1a1a1a;
   border-bottom: 1px solid #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .uie-title-input {
-  flex: 1;
+  max-width: 400px;
   background: #1a1a1a;
   border: none;
   color: #fff;
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
   outline: none;
+  height: 32px;
+  line-height: 32px;
+  margin: 0 auto;
 }
 .uie-source-label {
   margin-right: 8px;
   color: #aaa;
   font-size: 14px;
 }
+/* Close Button: absolutely positioned to the right and vertically centered */
 .uie-close-button {
   background: #333;
   border: 1px solid #444;
   color: #fff;
-  width: 32px;
-  height: 32px;
+  width: 40px;              /* Increased size */
+	height: calc(100% - 20px);
+  font-size: 20px;          /* Bigger text */
   cursor: pointer;
+	border-radius: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: absolute;
+	right: 10px;
+	top: 0;
+	bottom: 0;
+	margin: auto;
 }
 
 /* Main Content Area */
@@ -179,6 +196,7 @@
 /* Right Sub-Panel - Presets */
 .uie-presets-column {
   flex: 1;
+  min-width: 0;  /* Added to constrain shrinking */
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -191,6 +209,7 @@
   overflow-x: auto;
   gap: 8px;
   padding-top: 4px;
+	min-width: 0;
 }
 /* Preset Box */
 .uie-preset-box {
@@ -237,13 +256,26 @@
 /* Bottom Variant Strip */
 .uie-variant-strip {
   display: flex;
-  background: #1a1a1a;
+  background: #2a2a2a;
   border-top: 1px solid #444;
   padding: 8px;
 }
-.uie-variant-source,
+
+/* Bottom Variant Layout Adjustments */
+/* Adjust the Source container to only take as much space as needed with a clear divider */
+.uie-variant-source {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #444; /* Creates separation */
+  padding-right: 8px;           /* Adds some internal spacing */
+  margin-right: 8px;            /* Ensures spacing outside the container */
+}
+
+/* Allow the Variants container to fill the remaining space */
 .uie-variant-thumbnails {
   flex: 1;
+  min-width: 0;  /* Added to ensure the scroll area is constrained */
   display: flex;
   flex-direction: column;
 }
@@ -268,6 +300,7 @@
   overflow-x: auto;
   gap: 8px;
   padding-top: 4px;
+	min-width: 0;
 }
 .uie-variant-box {
   width: 80px;
