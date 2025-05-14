@@ -1,206 +1,213 @@
-// UnifiedImageEditor.js
-
-// We use an IIFE to encapsulate our unified editor
+// UnifiedImageEditor.js – Updated Static Example with Full Screen Overlay, Variant Strip, Metadata, and Controls
 const UnifiedImageEditor = (() => {
   'use strict';
 
-  let cropper = null;
-  let _saveCallback = null;
-  let currentFilters = { brightness: 100, contrast: 100, saturation: 100, hue: 0 };
+  /**
+   * Injects the new editor overlay HTML into the DOM if it doesn't already exist.
+   */
+  const ensureOverlayExists = () => {
+    if ($('#uie-overlay').length === 0) {
+      const editorHTML = `
+        <div id="unifiedImageEditor" class="uie-container">
+          <!-- Main Title Module (Overall Header) -->
+          <header class="uie-header">
+            <span class="uie-source-label" style="display: none;">Source:</span>
+            <input type="text" class="uie-title-input" value="Image Title">
+            <button class="uie-close-button">X</button>
+          </header>
+          
+          <!-- Main Content Area -->
+          <div class="uie-main-content">
+            <!-- Left Column: Image Editing Panel -->
+            <div class="uie-left-column">
+              <div class="uie-image-editing">
+                <img src="your-image.jpg" alt="Editable Image">
+                <!-- Crop overlay (areas outside active crop are heavily darkened) -->
+                <div class="uie-crop-overlay"></div>
+              </div>
+            </div>
+            
+            <!-- Right Column: Control Panel -->
+            <div class="uie-right-column">
+              <!-- Row 1: Metadata Panel -->
+              <div class="uie-panel uie-metadata-panel">
+                <div class="uie-panel-header">Metadata</div>
+                <div class="uie-panel-content">
+                  <input type="text" class="uie-alt-text" placeholder="Alt Text">
+                  <textarea class="uie-caption" placeholder="Caption"></textarea>
+                </div>
+              </div>
+              
+              <!-- Row 2: Tags Panel -->
+              <div class="uie-panel uie-tags-panel">
+                <div class="uie-panel-header">Tags</div>
+                <div class="uie-panel-content">
+                  <input type="text" class="uie-tag-input" placeholder="Add tag...">
+                  <div class="uie-tag-list"></div>
+                </div>
+              </div>
+              
+              <!-- Row 3: Combined Controls & Presets Panel -->
+              <div class="uie-panel uie-controls-presets-panel">
+                <div class="uie-controls-presets-content">
+                  <!-- Left Sub-Panel: Slider Controls -->
+                  <div class="uie-controls-column">
+                    <div class="uie-subpanel-header">Image Controls</div>
+                    <div class="uie-sliders">
+                      <label>Brightness <input type="range" class="uie-slider" min="0" max="200" value="100"></label>
+                      <label>Contrast <input type="range" class="uie-slider" min="0" max="200" value="100"></label>
+                      <label>Saturation <input type="range" class="uie-slider" min="0" max="200" value="100"></label>
+                      <label>Hue <input type="range" class="uie-slider" min="0" max="360" value="0"></label>
+                      <label>Zoom <input type="range" class="uie-slider" min="50" max="200" value="100"></label>
+                    </div>
+                  </div>
+                  <!-- Right Sub-Panel: Presets -->
+                  <div class="uie-presets-column">
+                    <!-- Filter Presets Row -->
+                    <div class="uie-presets-row uie-filter-presets">
+                      <div class="uie-subpanel-header">Filter Presets</div>
+                      <div class="uie-presets-scroll">
+                        <!-- Example preset box -->
+                        <div class="uie-preset-box" data-filter="sepia">
+                          <img src="filter-sepia.jpg" alt="Sepia preview">
+                          <span class="uie-preset-caption">Sepia</span>
+                        </div>
+                        <!-- Add additional preset boxes as needed -->
+                      </div>
+                    </div>
+                    <!-- Crop Presets Row -->
+                    <div class="uie-presets-row uie-crop-presets">
+                      <div class="uie-subpanel-header">Crop Presets</div>
+                      <div class="uie-presets-scroll">
+                        <div class="uie-preset-box" data-crop="16:9">
+                          <img src="crop-16-9.jpg" alt="16:9 preview">
+                          <span class="uie-preset-caption">16:9</span>
+                        </div>
+                        <!-- Add additional crop preset boxes as needed -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Row 4: Action Buttons Panel (no header here) -->
+              <div class="uie-panel uie-actions-panel">
+                <div class="uie-panel-content">
+                  <button class="uie-action-button uie-save-button">Save</button>
+                  <button class="uie-action-button uie-reset-crop-button">Reset Crop</button>
+                  <button class="uie-action-button uie-reset-zoom-button">Reset Zoom</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Bottom Variant Strip -->
+          <div class="uie-variant-strip">
+            <!-- Left: Source Section -->
+            <div class="uie-variant-source">
+              <div class="uie-panel-header">Source</div>
+              <div class="uie-thumbnail">
+                <img src="source-thumbnail.jpg" alt="Source Thumbnail">
+              </div>
+            </div>
+            <!-- Right: Variants Section -->
+            <div class="uie-variant-thumbnails">
+              <div class="uie-panel-header">Variants</div>
+              <div class="uie-variant-scroll">
+                <div class="uie-variant-box">
+                  <img src="variant1.jpg" alt="Variant 1">
+                  <span class="uie-variant-caption">Variant 1</span>
+                </div>
+                <!-- Additional variant boxes as needed -->
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      $('body').append(editorHTML);
+    }
+  };
 
   /**
-   * Opens the editor modal, loads the image, and initializes Cropper.js.
-   * @param {string} imageUrl - The URL of the image to edit.
-   * @param {function} callback - Called with the edited image data URL when saved.
+   * Opens the editor overlay (static sample).
+   * @param {string} imageUrl - The URL of the image to display.
+   * @param {function} callback - (Not used in static mode)
    */
   const openEditor = (imageUrl, callback) => {
-    _saveCallback = callback;
-    // Set the source of the image element in the modal.
-    $('#cropper-image').attr('src', imageUrl);
-    // Display the modal.
-    $('#cropper-modal').fadeIn(300, () => {
-      // Once visible, initialize Cropper.js.
-      initializeCropper();
-    });
+    ensureOverlayExists();
+    // Set the main image and original thumbnail (currently using the same image).
+    $('#uie-image').attr('src', imageUrl);
+    $('#uie-original-thumb').attr('src', imageUrl);
+    // Show the overlay.
+    $('#uie-overlay').removeClass('hidden').fadeIn(300);
+    console.log("Opened static Unified Image Editor overlay for image:", imageUrl);
   };
 
   /**
-   * Initializes Cropper.js on the image element.
-   */
-  const initializeCropper = () => {
-    const imageElement = document.getElementById('cropper-image');
-    if (cropper) {
-      cropper.destroy();
-    }
-    cropper = new Cropper(imageElement, {
-      aspectRatio: 16 / 9, // Example ratio. Adjust as needed.
-      viewMode: 1,
-      autoCropArea: 1,
-      responsive: true,
-    });
-  };
-
-  /**
-   * Updates the live preview element by applying CSS filters.
-   */
-  const updateLivePreview = () => {
-    const filterStr = `brightness(${currentFilters.brightness}%) contrast(${currentFilters.contrast}%) saturate(${currentFilters.saturation}%) hue-rotate(${currentFilters.hue}deg)`;
-		$('#cropper-live-preview, #cropper-image').css('filter', filterStr);
-  };
-
-  /**
-   * Binds slider events to update filter values.
-   */
-  const bindFilterControls = () => {
-		console.log("Filter controls bound");
-    $('#brightness-slider').on('input', function () {
-			console.log("Brightness slider changed:", this.value);
-      currentFilters.brightness = parseInt(this.value, 10);
-      updateLivePreview();
-    });
-    $('#contrast-slider').on('input', function () {
-			console.log("Contrast slider changed:", this.value);
-      currentFilters.contrast = parseInt(this.value, 10);
-      updateLivePreview();
-    });
-    $('#saturation-slider').on('input', function () {
-			console.log("Saturation slider changed:", this.value);
-      currentFilters.saturation = parseInt(this.value, 10);
-      updateLivePreview();
-    });
-    $('#hue-slider').on('input', function () {
-			console.log("Hue slider changed:", this.value);
-      currentFilters.hue = parseInt(this.value, 10);
-      updateLivePreview();
-    });
-  };
-
-  /**
-   * Resets filter values to defaults.
-   */
-  const resetFilters = () => {
-    currentFilters = { brightness: 100, contrast: 100, saturation: 100, hue: 0 };
-    $('#brightness-slider').val(100);
-    $('#contrast-slider').val(100);
-    $('#saturation-slider').val(100);
-    $('#hue-slider').val(0);
-    updateLivePreview();
-  };
-
-  /**
-   * Zooms the image via Cropper.js.
-   * @param {number} ratio - The amount to zoom in (positive) or out (negative).
-   */
-  const zoomImage = (ratio) => {
-    if (cropper) {
-      cropper.zoom(ratio);
-    }
-  };
-
-  /**
-   * Resets the cropper and filter values.
-   */
-  const resetCropper = () => {
-    if (cropper) {
-      cropper.reset();
-      resetFilters();
-    }
-  };
-
-  /**
-   * Crops the current image and applies the filters non-destructively.
-   * Returns a data URL of the final image.
-   * @returns {string} data URL of the processed image.
-   */
-  const cropImage = () => {
-    if (!cropper) return '';
-    // Get the cropped canvas from Cropper.js.
-    const croppedCanvas = cropper.getCroppedCanvas();
-    // Apply the CSS filters onto a new canvas.
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = croppedCanvas.width;
-    offCanvas.height = croppedCanvas.height;
-    const ctx = offCanvas.getContext('2d');
-    const filterStr = `brightness(${currentFilters.brightness}%) contrast(${currentFilters.contrast}%) ` +
-                      `saturate(${currentFilters.saturation}%) hue-rotate(${currentFilters.hue}deg)`;
-    // Set the context filter before drawing.
-    ctx.filter = filterStr;
-    ctx.drawImage(croppedCanvas, 0, 0);
-    return offCanvas.toDataURL('image/jpeg');
-  };
-
-  /**
-   * Closes the editor modal and cleans up the Cropper instance.
+   * Closes the editor overlay.
    */
   const closeEditor = () => {
-    if (cropper) {
-      cropper.destroy();
-      cropper = null;
-    }
-    $('#cropper-modal').fadeOut(300);
-    resetFilters();
+    $('#uie-overlay').fadeOut(300, () => {
+      $('#uie-overlay').addClass('hidden');
+    });
+    console.log("Closed static editor overlay.");
   };
 
   /**
-   * Binds all necessary event handlers within the modal.
+   * Binds static event handlers for controls.
    */
-  const bindEditorEvents = () => {
-    // Crop button: simply crop and return the image.
-    $('#cropper-crop-button').on('click', () => {
-      try {
-        const dataURL = cropImage();
-        if (typeof _saveCallback === 'function') {
-          _saveCallback(dataURL);
-        }
-        closeEditor();
-        Notifications.show('Image cropped successfully.', 'success');
-      } catch (err) {
-        Notifications.show('Error during cropping: ' + err.message, 'error');
+  const bindStaticEvents = () => {
+    ensureOverlayExists();
+
+    // Close button
+    $('#uie-close-btn').off('click').on('click', () => { closeEditor(); });
+
+    // Cancel button.
+    $('#uie-cancel-btn').off('click').on('click', () => { closeEditor(); });
+
+    // Revert to source button.
+    $('#uie-back-to-source').off('click').on('click', () => {
+      console.log("Reverting to original source image.");
+    });
+
+    // Log actions for Crop, Save, Zoom In/Out, Reset.
+    $('#uie-crop-btn').off('click').on('click', () => { console.log("Static: Crop button clicked."); });
+    $('#uie-save-btn').off('click').on('click', () => { console.log("Static: Save New Image button clicked."); });
+    $('#uie-zoom-in-btn').off('click').on('click', () => { console.log("Static: Zoom In button clicked."); });
+    $('#uie-zoom-out-btn').off('click').on('click', () => { console.log("Static: Zoom Out button clicked."); });
+    $('#uie-reset-btn').off('click').on('click', () => { console.log("Static: Reset button clicked."); });
+
+    // Bind slider events for logging.
+    $('.uie-slider-group input[type="range"]').off('input').on('input', function() {
+      console.log(this.id, "changed to", this.value);
+    });
+
+    // Tags: add tag when Enter is pressed.
+    $('#uie-new-tag').off('keyup').on('keyup', function(e) {
+      if (e.key === 'Enter' && this.value.trim() !== "") {
+        let tagText = this.value.trim();
+        let $tag = $('<div class="uie-tag"></div>').text(tagText);
+        $('#uie-tags-container').append($tag);
+        this.value = "";
+        console.log("Added tag:", tagText);
       }
     });
 
-    // Save New Image: same as cropping but keyed as “save new”.
-    $('#cropper-save-new-image').on('click', () => {
-      try {
-        const dataURL = cropImage();
-        if (typeof _saveCallback === 'function') {
-          _saveCallback(dataURL);
-        }
-        closeEditor();
-        Notifications.show('New image saved.', 'success');
-      } catch (err) {
-        Notifications.show('Error saving new image: ' + err.message, 'error');
-      }
+    // Variant selection: update main image source when a variant is clicked.
+    $('.variant-item').off('click').on('click', function() {
+      $('.variant-item').removeClass('active');
+      $(this).addClass('active');
+      let newSrc = $(this).find('img').attr('src');
+      $('#uie-image').attr('src', newSrc);
+      console.log("Switched to variant:", newSrc);
     });
-
-    // Cancel button: close editor without changes.
-    $('#cropper-cancel-button').on('click', () => {
-      closeEditor();
-      Notifications.show('Image editing cancelled.', 'info');
-    });
-
-    // Example zoom controls (ensure corresponding buttons exist in your HTML)
-    $('#cropper-zoom-in').on('click', () => zoomImage(0.1));
-    $('#cropper-zoom-out').on('click', () => zoomImage(-0.1));
-    $('#cropper-reset').on('click', () => resetCropper());
   };
 
-  /**
-   * Initializes the unified image editor by binding filter controls and editor events.
-   */
-  const init = () => {
-    bindFilterControls();
-    bindEditorEvents();
-  };
-
-  // Auto-initialize once the document is ready.
+  // Initialize static events on document ready.
   $(document).ready(() => {
-    init();
+    bindStaticEvents();
+    console.log("Static UnifiedImageEditor initialized for styling.");
   });
 
-  // The module's public API.
-  return { openEditor };
+  return { openEditor, closeEditor };
 })();
-
-// Export for later use if using a module bundler (optional)
-// export default UnifiedImageEditor;

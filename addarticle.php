@@ -14,7 +14,8 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <!-- Main Merged Stylesheet -->
-  <link href="css/techlology.css?v=<?php echo filemtime('css/techlology.css'); ?>" rel="stylesheet" type="text/css">
+  <link href="css/global.css?v=<?php echo filemtime('css/global.css'); ?>" rel="stylesheet" type="text/css">
+	<link href="css/addarticle.css?v=<?php echo filemtime('css/addarticle.css'); ?>" rel="stylesheet" type="text/css">
   
   <!-- jQuery & jQuery UI for interactions -->
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

@@ -1,16 +1,54 @@
-/* medialibrary.css - Specific styles for the Global Media Library page */
+/* =============================
+   MEDIALIBRARY PAGE LAYOUT OVERRIDES
+============================= */
 
-/* Main container adjustments */
-.media-library-container {
-  padding: 20px;
+/* Ensure the medialibrary page uses a flex layout instead of grid.
+   (Assume you add a class to the body, e.g., <body class="media-library-page">) */
+.media-library-page .layout {
+  display: flex !important;
+  flex-direction: row;
+  min-height: 100vh;
+  background-color: #1e1e1e;
+  /* Remove grid-related properties */
+  grid-template-columns: unset !important;
 }
 
-/* Search Bar */
-.search-bar {
+/* Sidebar specific to medialibrary page */
+.media-library-page .sidebar {
+  width: 220px;
+  background-color: #111;
+  color: #fff;
+  padding: 20px;
+  /* Remove overflow if not needed */
+  overflow-y: visible !important;
+}
+
+/* Main content area in medialibrary page */
+.media-library-page .main {
+  flex-grow: 1;
+  padding: 20px;
+  background-color: #1e1e1e;
+  color: #e1e1e1;
+}
+
+/* Header Title override if necessary */
+.media-library-page .main h1 {
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+/* Status/Feedback Message override */
+.media-library-page .status {
+  margin-bottom: 10px;
+  font-style: italic;
+  color: #aaa;
+}
+
+/* Styling for the search box for medialibrary page */
+.media-library-page .media-search {
   margin-bottom: 20px;
 }
-
-.search-bar input {
+.media-library-page .media-search input {
   width: 100%;
   max-width: 300px;
   padding: 8px;
@@ -20,15 +58,15 @@
   color: #e1e1e1;
 }
 
-/* Media Grid */
-.media-grid {
+/* Media Grid for Global Media Library */
+#global-media {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
 }
 
-/* Media Item Styles (Polaroid-style presentation) */
-.media-item {
+/* Media Item (polaroid-style) for medialibrary page */
+.global-media-item {
   width: 150px;
   background: #2b2e36;
   border: 1px solid #444;
@@ -40,78 +78,50 @@
   flex-direction: column;
   align-items: center;
 }
-
-.media-item img {
+.global-media-item img {
   width: 100%;
   height: 100px;
   object-fit: cover;
   border-radius: 4px;
   margin-bottom: 8px;
 }
-
-/* Caption styling */
-.media-caption {
+.media-title {
   font-size: 13px;
   text-align: center;
   color: #e1e1e1;
   margin-bottom: 8px;
 }
-
-/* Global In Use Indicator (red badge) */
-.global-indicator {
+/* Variant badge – if using transformation parameter indicator */
+.variant-indicator {
   position: absolute;
   top: 8px;
   left: 8px;
   background: #f44336;
   color: #fff;
-  padding: 2px 4px;
   font-size: 10px;
+  padding: 2px 4px;
   border-radius: 3px;
 }
-
-/* Article-Specific In Use Indicator (blue badge) */
-.article-indicator {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: #007bff;
-  color: #fff;
-  padding: 2px 4px;
-  font-size: 10px;
-  border-radius: 3px;
-}
-
-/* Delete Button */
-.delete-button {
-  width: 100%;
-  padding: 6px;
-  background: #f44336;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
+.global-media-item:hover {
+  border-color: #888;
   cursor: pointer;
-  font-size: 13px;
 }
 
-.delete-button[disabled] {
-  background: #777;
-  cursor: not-allowed;
-}
-
-/* If you opt to show bulk action controls in the right column */
-.controls {
-  padding: 20px;
-}
-
-.controls .card {
-  background: #2b2e36;
-  border: 1px solid #444;
-  padding: 15px;
-  border-radius: 6px;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.3);
-  margin-bottom: 20px;
-}
-
-.controls .card h3 {
-  margin-top: 0;
-}
+/* 
+  The following block HAS BEEN REMOVED:
+  
+  ----------------------------------------------------------
+  /* Cropper Modal & Editor components remain here as needed * /
+  .cropper-modal { ... }
+  .cropper-area { ... }
+  .cropper-controls { ... }
+  .slider-group { ... }
+  .slider-group label { ... }
+  .slider-group input[type="range"] { ... }
+  .action-buttons button { ... }
+  .action-buttons button:hover { ... }
+  .live-preview { ... }
+  ----------------------------------------------------------
+  
+  Instead, these will live in unifiedimageeditor.css.
+*/

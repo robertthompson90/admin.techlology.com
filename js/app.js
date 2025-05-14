@@ -1,34 +1,40 @@
 $(document).ready(function(){
   console.log("Initializing application modules...");
 
-  // Initialize all existing modules.
-  Validation.init();
-  Sections.init();
-  Dropzones.init();
-  Tags.init();
-  Sources.init();
-  Lightbox.init();
-  Autosave.init();
-  Preview.init();
-  KeyboardShortcuts.init();
-  MediaLibrary.init();
-  FormNavigation.init();
-  MediaUpload.init();
-  StagingArea.init();   // Moved before UndoRedo.saveState()
-  UndoRedo.init();
-  
-  Notifications.show("Application initialized", "success");
+  // List the module names to initialize.
+  var modules = [
+    "Validation",
+    "Sections",
+    "Dropzones",
+    "Tags",
+    "Sources",
+    "Lightbox",
+    "Autosave",
+    "Preview",
+    "KeyboardShortcuts",
+    "MediaLibrary",
+    "FormNavigation",
+    "MediaUpload",
+    "StagingArea",   // Moved before UndoRedo.saveState()
+    "UndoRedo"
+  ];
 
-  // Sample Trigger: When '#some-open-editor-button' is clicked,
-  // open the Advanced Image Editor. Replace with your actual trigger.
-  $("#some-open-editor-button").on("click", function(){
-    var imageUrl = "path/to/your/image.jpg"; // Replace with a real URL.
-    AdvancedImageEditor.openEditor(imageUrl, function(croppedDataUrl, mediaId, editMetaData){
-      // Add the edited image along with non-destructive metadata to staging.
-      StagingArea.addMediaToStaging(croppedDataUrl, mediaId, editMetaData);
-      Notifications.show("Image cropped and added to staging", "success");
-    });
+  // Loop through each module name and attempt to call its init() function.
+  modules.forEach(function(moduleName) {
+    if (typeof window[moduleName] !== "undefined" && typeof window[moduleName].init === "function") {
+      window[moduleName].init();
+      console.log("[" + moduleName + "] initialized.");
+    } else {
+      console.log("[" + moduleName + "] module not loaded.");
+    }
   });
+
+  // Initialize Notifications if available, used to display messages.
+  if (typeof Notifications !== "undefined" && typeof Notifications.show === "function") {
+    Notifications.show("Application initialized", "success");
+  } else {
+    console.log("[Notifications] module not loaded.");
+  }
 
   console.log("All modules have been initialized.");
 });

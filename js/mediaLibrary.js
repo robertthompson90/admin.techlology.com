@@ -1,8 +1,10 @@
 // js/mediaLibrary.js
 var MediaLibrary = (function(){
-  var pinnedIds = {}; // Object to hold pinned media IDs
+  // (Optional) If you want to support pinning to prioritize items,
+  // you can leave this here. Otherwise, it’s not used in our minimal design.
+  var pinnedIds = {};
 
-  // Loads media from the server, with an optional search query
+  // Loads media from the server, with an optional search query.
   function loadMedia(query) {
     query = query || "";
     $.ajax({
@@ -19,28 +21,18 @@ var MediaLibrary = (function(){
     });
   }
 
-  // Render the media items inside #global-media
+  // Render the media items inside #global-media.
   function renderMedia(mediaArray) {
     var $globalMedia = $("#global-media");
     $globalMedia.empty();
+
     if (mediaArray && mediaArray.length > 0) {
-      // Separate pinned items from others
-      var pinned = [];
-      var unpinned = [];
+      // In our minimal design, we simply list the media items.
       mediaArray.forEach(function(media) {
-        if (pinnedIds[media.id]) {
-          pinned.push(media);
-        } else {
-          unpinned.push(media);
-        }
-      });
-      // Combine pinned items first
-      var combined = pinned.concat(unpinned);
-      combined.forEach(function(media){
         var $item = $("<div></div>")
                       .addClass("global-media-item")
                       .attr("data-media-id", media.id);
-        
+                      
         var $img = $("<img>")
                         .attr("src", media.image_url)
                         .attr("alt", media.title);
@@ -48,13 +40,20 @@ var MediaLibrary = (function(){
         var $title = $("<div></div>")
                         .addClass("media-title")
                         .text(media.title);
-                        
-        // Create a pin button
+        
+        // Optionally add a variant indicator badge if transformation parameters exist.
+        if (media.variant_count && media.variant_count > 0) {
+          var $variantBadge = $("<span></span>")
+                                .addClass("variant-indicator")
+                                .text("v" + media.variant_count);
+          $item.append($variantBadge);
+        }
+        
+        // (Optional) Remove the pin button for a minimal interface.
+        /*
         var $pin = $("<button></button>")
                         .addClass("pin-button")
                         .html(pinnedIds[media.id] ? "&#9733;" : "&#9734;");
-                        
-        // Toggle pin when the pin button is clicked
         $pin.on("click", function(e){
           e.stopPropagation();
           var mediaId = $(this).closest(".global-media-item").data("media-id");
@@ -63,31 +62,31 @@ var MediaLibrary = (function(){
           } else {
             pinnedIds[mediaId] = true;
           }
-          // Reload the media list with current search query (if any)
           var currentQuery = $(".media-search input").val();
           loadMedia(currentQuery);
           Notifications.show("Media item " + (pinnedIds[mediaId] ? "pinned" : "unpinned"), "info");
         });
+        $item.append($pin);
+        */
         
-        $item.append($img).append($pin).append($title);
+        $item.append($img).append($title);
         
-        /// When the media item is double-clicked, open the full-screen editor.
-				$item.on("dblclick", function(){
-					const imageUrl = $(this).find("img").attr("src");
-					console.log("Double-click detected on media item, image URL:", imageUrl);
+        // Inside renderMedia() when creating the media item element:
+				$item.on("click", function(){
+					var mediaId = $(this).data("media-id");
+					var imageUrl = $(this).find("img").attr("src");
+					console.log("Single-click on media item with ID:", mediaId, "and image URL:", imageUrl);
 					
 					if (imageUrl) {
-						UnifiedImageEditor.openEditor(imageUrl, (editedDataURL) => {
-							console.log("Unified editor returned data URL:", editedDataURL);
-							// Example: Update the staging area with the new image:
-							// Pass along appropriate mediaId and editMetaData if available.
-							StagingArea.addMediaToStaging(editedDataURL, "tempMediaId", { edited: true });
+						UnifiedImageEditor.openEditor(imageUrl, function(editedDataURL){
+							console.log("Edited image data received:", editedDataURL);
+							// Update the master asset directly
+							updateAsset(mediaId, editedDataURL);
 						});
 					} else {
-						console.warn("No image URL found for this media item.");
+						console.warn("No image URL found for media item with ID:", mediaId);
 					}
-				});
-        
+				});        
         $globalMedia.append($item);
       });
     } else {
@@ -95,14 +94,37 @@ var MediaLibrary = (function(){
     }
   }
 
+  // Update the master asset with the edited image data.
+  function updateAsset(mediaId, editedDataURL) {
+    $.ajax({
+      url: "ajax/updateMediaAsset.php",
+      type: "POST",
+      data: {
+        id: mediaId,
+        image_data: editedDataURL
+      },
+      dataType: "json",
+      success: function(response) {
+        if(response.success) {
+          Notifications.show("Asset updated successfully", "success");
+          loadMedia();
+        } else {
+          Notifications.show("Failed to update asset", "error");
+        }
+      },
+      error: function() {
+        Notifications.show("Error updating asset", "error");
+      }
+    });
+  }
+
   // Initialize the media library interface.
   function init(){
-    // Add a search box above the media list if not already present.
+    // Check if a search box already exists. If not, insert one above #global-media.
     if ($("#global-media").prev(".media-search").length === 0) {
       var $searchDiv = $("<div></div>").addClass("media-search");
       var $input = $("<input type='text' placeholder='Search media...'>");
       $input.on("input", function(){
-        // Reload media with the current query
         var q = $(this).val();
         loadMedia(q);
       });
@@ -115,6 +137,7 @@ var MediaLibrary = (function(){
   return {
     init: init,
     loadMedia: loadMedia,
-    renderMedia: renderMedia
+    renderMedia: renderMedia,
+    updateAsset: updateAsset
   };
 })();

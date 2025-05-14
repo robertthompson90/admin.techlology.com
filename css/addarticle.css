@@ -1,0 +1,40 @@
+/* =============================
+   ADDARTICLE PAGE LAYOUT & OVERRIDES
+============================= */
+
+/* Use the grid layout as defined originally in techlology.css */
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr minmax(550px, 2fr);
+  height: 100vh;
+  overflow: hidden;
+  /* Inherit the font-family from global if needed */
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Sidebar for addarticle (using existing nav styles; can further override if needed) */
+.sidebar {
+  background-color: #2d2d2d;
+  color: #fff;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+/* Main content area */
+.main {
+  padding: 20px;
+  background: #0f1117;
+  color: #e1e1e1;
+  overflow-y: auto;
+}
+
+/* Media Panels (if present on addarticle page) */
+.media-panels {
+  background: #1f222b;
+  padding: 15px;
+  border-left: 1px solid #333;
+  overflow-y: auto;
+  color: #e1e1e1;
+}
+
+/* (Optional) Addarticle‑specific form or component overrides can follow here */

@@ -1,0 +1,393 @@
+/* =============================
+   GLOBAL RESET & BASE STYLES
+============================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', sans-serif;
+  user-select: none;
+}
+input, textarea {
+  user-select: text;
+}
+body {
+  background-color: #0f1117;
+  color: #e1e1e1;
+}
+
+.hidden {
+  display: none !important;
+}
+
+
+/* =============================
+   GLOBAL TYPOGRAPHY & ELEMENTS
+============================= */
+a {
+  text-decoration: none;
+}
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =============================
+   GLOBAL BUTTON & FORM STYLES
+============================= */
+button,
+input[type="submit"] {
+  background: #2a2a3a;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover,
+input[type="submit"]:hover {
+  background: #333;
+}
+input[type="text"],
+input[type="url"],
+textarea,
+select {
+  width: 100%;
+  padding: 8px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background-color: #0f1117;
+  color: #e1e1e1;
+}
+textarea {
+  resize: vertical;
+}
+label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+/* =============================
+   GLOBAL NAVIGATION
+============================= */
+.nav {
+  list-style: none;
+}
+.nav-item {
+  padding: 12px 20px;
+  color: #ccc;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.nav-item:hover,
+.nav-item.active {
+  background: #2a2e3a;
+  color: #fff;
+}
+.nav-item a {
+  color: inherit;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.nav-item a.active {
+  background-color: #333;
+  color: #ffb300;
+}
+.nav-item a.logout {
+  color: #f44336;
+}
+
+/* =============================
+   GLOBAL CARDS & FORM COMPONENTS
+============================= */
+.card {
+  background: #1f222b;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.4);
+  color: #e1e1e1;
+}
+.card h2 {
+  margin-top: 0;
+  font-size: 1.2em;
+}
+
+/* =============================
+   GLOBAL TAGS
+============================= */
+#selected-tags {
+  margin-top: 10px;
+}
+.selected-tag {
+  display: inline-block;
+  background: #2a2a3a;
+  padding: 5px 8px;
+  border-radius: 4px;
+  color: #fff;
+  margin: 0 5px 5px 0;
+}
+.selected-tag .remove-tag {
+  color: #f44336;
+  margin-left: 5px;
+  cursor: pointer;
+}
+
+/* =============================
+   GLOBAL MODULES (Pros/Cons, Rating, Sources)
+============================= */
+.pros-cons-wrapper {
+  display: flex;
+  gap: 20px;
+}
+.pros-column,
+.cons-column {
+  flex: 1;
+}
+.pros-items,
+.cons-items {
+  border: 1px solid #333;
+  padding: 5px;
+  min-height: 30px;
+}
+.pros-item,
+.cons-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.pros-item input,
+.cons-item input {
+  flex: 1;
+  padding: 5px;
+  margin-left: 5px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #0f1117;
+  color: #e1e1e1;
+}
+.pros-items.multiple .remove-pro,
+.cons-items.multiple .remove-cons {
+  display: inline-block;
+  color: #f44336;
+  cursor: pointer;
+  margin-right: 5px;
+}
+.rating-widget {
+  display: inline-block;
+  margin-bottom: 10px;
+}
+.rating-widget .star {
+  font-size: 24px;
+  color: #aaa;
+  cursor: pointer;
+  margin-right: 5px;
+}
+.rating-widget .star.selected {
+  color: #ffb300;
+}
+.source {
+  background: #1f222b;
+  border: 1px solid #333;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+.source label {
+  display: block;
+  margin-bottom: 4px;
+}
+.source input[type="text"],
+.source input[type="url"],
+.source textarea {
+  margin-bottom: 5px;
+}
+.source button.remove-source {
+  background: #f44336;
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* =============================
+   GLOBAL DROPZONE & GALLERY
+============================= */
+.dropzone {
+  position: relative;
+  border: 2px dashed #888;
+  padding: 20px;
+  text-align: center;
+  margin-top: 10px;
+  cursor: pointer;
+}
+.dropzone:hover,
+.dropzone.dragover {
+  border-color: #007bff;
+  background: rgba(0, 123, 255, 0.1);
+}
+.image-preview-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px auto 0;
+}
+.image-preview-container:empty {
+  display: none;
+}
+
+/* =============================
+   GLOBAL LIGHTBOX
+============================= */
+#lightbox-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+}
+#lightbox-overlay.active {
+  display: flex;
+}
+#lightbox-content {
+  max-width: 90%;
+  max-height: 90%;
+}
+#lightbox-content img {
+  max-width: 100%;
+  max-height: 100%;
+  border: 5px solid #fff;
+  border-radius: 5px;
+}
+
+/* =============================
+   GLOBAL STATUS & VALIDATION
+============================= */
+#autosave-status {
+  padding: 5px 10px;
+  background: #2a2a3a;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-top: 10px;
+}
+.input-error {
+  border-color: #f44336 !important;
+}
+.error-message {
+  color: #f44336;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* =============================
+   GLOBAL PREVIEW MODAL
+============================= */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+.preview-modal-content {
+  background: #1f222b;
+  padding: 20px;
+  border-radius: 6px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  color: #e1e1e1;
+  position: relative;
+}
+.preview-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  color: #fff;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+/* =============================
+   GLOBAL ACCESSIBILITY
+============================= */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  overflow: hidden;
+}
+
+/* =============================
+   GLOBAL POLAROID (optional, re‑usable)
+============================= */
+.polaroid {
+  background: #2b2e36;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 8px;
+  width: 160px;
+  margin: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.polaroid .polaroid-image {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.polaroid .polaroid-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  object-fit: contain;
+  display: block;
+}
+.polaroid .polaroid-caption {
+  width: 100%;
+  border: 1px solid #444;
+  background: #2b2e36;
+  color: #e1e1e1;
+  font-size: 13px;
+  padding: 4px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+.polaroid .remove-photo {
+  background: #f44336;
+  border: none;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s ease;
+}
+.polaroid .remove-photo:hover {
+  background: #d32f2f;
+}
