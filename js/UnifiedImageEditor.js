@@ -343,7 +343,8 @@ const UnifiedImageEditor = (() => {
    * Loads media presets from the AJAX endpoint, dynamically renders them,
    * and stores them globally for later updates.
    */
-  const loadMediaPresets = () => {
+  /*
+	const loadMediaPresets = () => {
     $.ajax({
       url: '/ajax/getMediaPresets.php',
       method: 'GET',
@@ -377,6 +378,44 @@ const UnifiedImageEditor = (() => {
       }
     });
   };
+	*/
+	const loadMediaPresets = () => {
+		$.ajax({
+			url: '/ajax/getMediaPresets.php',
+			method: 'GET',
+			dataType: 'json',
+			success: function(response) {
+				presetsData = response;
+				$('.uie-filter-presets .uie-presets-scroll').empty();
+				$('.uie-crop-presets .uie-presets-scroll').empty();
+				response.forEach(function(preset) {
+					generatePresetThumbnail(preset).then(function(dataUrl) {
+						// Modified presetBox to include unique id:
+						const presetBox = `
+							<div id="preset_${preset.id}" class="uie-preset-box uie-box" data-preset-id="${preset.id}" data-preset-type="${preset.type}" data-preset-details='${preset.preset_details}'>
+								<div class="image-container">
+									<img class="uie-box-img" src="${dataUrl}" alt="${preset.name}">
+								</div>
+								<span class="uie-preset-caption uie-box-caption">${preset.name}</span>
+							</div>
+						`;
+						if (preset.type === 'filter') {
+							$('.uie-filter-presets .uie-presets-scroll').append(presetBox);
+						} else if (preset.type === 'crop') {
+							$('.uie-crop-presets .uie-presets-scroll').append(presetBox);
+						}
+					}).catch(function(err) {
+						console.error("Error generating thumbnail for preset:", err);
+					});
+				});
+				// After inserting presets, initialize sorting.
+				setupPresetSorting();
+			},
+			error: function(err) {
+				console.error("Error loading media presets:", err);
+			}
+		});
+	};
 
   /**
    * Updates all preset thumbnails dynamically based on the current crop and filter settings.
@@ -395,6 +434,66 @@ const UnifiedImageEditor = (() => {
       });
     });
   };
+	
+	/**
+ * Initializes sortable behavior on the preset scroll containers.
+ * When the order changes, it collects the new order (an array of preset IDs)
+ * and sends it via AJAX to updatePresetOrder.php.
+ */
+const setupPresetSorting = () => {
+  // Make filter presets sortable
+  $('.uie-filter-presets .uie-presets-scroll').sortable({
+    axis: 'x',
+    items: '> .uie-preset-box',
+    // Prevent items from shrinking
+    start: function(event, ui) {
+      ui.item.css('flex', '0 0 auto');
+    },
+    update: function(event, ui) {
+      // Retrieve preset IDs in their new order
+      const newOrder = $(this).sortable("toArray", { attribute: "data-preset-id" });
+      console.log("New filter preset order:", newOrder);
+      // Send the new order to the server
+      $.ajax({
+        url: '/ajax/updatePresetOrder.php',
+        type: 'POST',
+        dataType: 'json',
+        data: { order: newOrder },
+        success: function(response) {
+          console.log("Filter preset order updated successfully!", response);
+        },
+        error: function(err) {
+          console.error("Error updating filter preset order", err);
+        }
+      });
+    }
+  });
+
+  // Make crop presets sortable
+  $('.uie-crop-presets .uie-presets-scroll').sortable({
+			axis: 'x',
+			items: '> .uie-preset-box',
+			start: function(event, ui) {
+				ui.item.css('flex', '0 0 auto');
+			},
+			update: function(event, ui) {
+				const newOrder = $(this).sortable("toArray", { attribute: "data-preset-id" });
+				console.log("New crop preset order:", newOrder);
+				$.ajax({
+					url: '/ajax/updatePresetOrder.php',
+					type: 'POST',
+					dataType: 'json',
+					data: { order: newOrder },
+					success: function(response) {
+						console.log("Crop preset order updated successfully!", response);
+					},
+					error: function(err) {
+						console.error("Error updating crop preset order", err);
+					}
+				});
+			}
+		});
+	};
 
   // Create a debounced version for updating preset thumbnails (300ms delay)
   debouncedUpdateThumbnails = debounce(updatePresetThumbnails, 300);
