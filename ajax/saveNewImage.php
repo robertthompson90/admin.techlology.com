@@ -1,7 +1,6 @@
 <?php
 // ajax/saveNewImage.php
-// Creates a new "virtual master" asset in media_assets,
-// referencing an original physical file but with its own default crop/filters and admin_title.
+// Creates a new "virtual master" asset in media_assets.
 header('Content-Type: application/json');
 include '../inc/loginanddb.php';
 
@@ -19,12 +18,11 @@ $source_media_asset_id = isset($_POST['source_media_asset_id']) ? (int)$_POST['s
 $current_crop_json = isset($_POST['current_crop_json']) ? $_POST['current_crop_json'] : '{}';
 $current_filters_json = isset($_POST['current_filters_json']) ? $_POST['current_filters_json'] : '{}';
 
-// 'new_caption' from JS now maps to 'admin_title' in the DB for the new virtual master
-$new_admin_title = isset($_POST['new_caption']) ? trim($_POST['new_caption']) : 'New Virtual Image'; 
+// Parameters from JavaScript for the new virtual master
+$new_admin_title = isset($_POST['new_admin_title']) ? trim($_POST['new_admin_title']) : 'New Virtual Image'; 
+$new_public_caption = isset($_POST['new_public_caption']) ? trim($_POST['new_public_caption']) : '';
 $new_alt_text = isset($_POST['new_alt_text']) ? trim($_POST['new_alt_text']) : '';
 $new_attribution = isset($_POST['new_attribution']) ? trim($_POST['new_attribution']) : '';
-// The public caption for a new virtual master can be empty by default or set to admin_title if desired
-$new_public_caption = ''; // Or: $new_public_caption = $new_admin_title;
 
 
 if (empty($source_media_asset_id)) {
@@ -70,8 +68,6 @@ try {
         }
     }
 
-    // Insert new virtual master, saving new_admin_title to admin_title column
-    // and new_public_caption to caption column.
     $stmtInsert = $db->prepare(
         "INSERT INTO media_assets 
             (file_path, file_size, file_hash, physical_source_asset_id, 
@@ -88,8 +84,8 @@ try {
         $true_physical_source_id,
         $current_crop_json,
         $current_filters_json,
-        $new_admin_title,       // Saved to admin_title
-        $new_public_caption,    // Saved to caption
+        $new_admin_title,       
+        $new_public_caption,    
         $new_alt_text,
         $new_attribution
     ]);
@@ -97,15 +93,17 @@ try {
     $newVirtualMasterId = $db->lastInsertId();
     $db->commit();
 
+    // Return all necessary fields for the UIE to reload correctly
     echo json_encode([
         'success' => true,
         'message' => 'Virtual master image created successfully.',
         'media' => [
             'id' => $newVirtualMasterId,
             'file_path' => $physicalAssetDetails['file_path'],
-            'admin_title' => $new_admin_title, // Return the admin_title
-            'title' => $new_admin_title,       // Also return as 'title' for UIE consistency
-            'caption' => $new_public_caption,  // Return the public caption
+            'admin_title' => $new_admin_title, 
+            'title' => $new_admin_title, // For UIE consistency, derived from admin_title
+            'public_caption' => $new_public_caption, // Send back the saved public caption
+            'caption' => $new_public_caption, // Keep for compatibility if JS expects 'caption'
             'alt_text' => $new_alt_text,
             'attribution' => $new_attribution,
             'physical_source_asset_id' => $true_physical_source_id,

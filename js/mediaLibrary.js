@@ -1,6 +1,5 @@
 // js/mediaLibrary.js
 var MediaLibrary = (function(){
-  // var pinnedIds = {}; // Optional
 
   function loadMedia(query = "") {
     $.ajax({
@@ -9,8 +8,6 @@ var MediaLibrary = (function(){
       data: { q: query },
       dataType: "json",
       success: function(response) {
-        // Check if response is already an object (due to PHP echoing json_encode directly)
-        // or if it's a string that needs parsing (less common with dataType: "json")
         let mediaData = response;
         if (typeof response === 'string') {
             try {
@@ -35,21 +32,25 @@ var MediaLibrary = (function(){
     $globalMedia.empty();
 
     if (mediaArray && Array.isArray(mediaArray) && mediaArray.length > 0) {
-      mediaArray.forEach(function(mediaAsset) { // Changed variable name for clarity
+      mediaArray.forEach(function(mediaAsset) { 
         var $item = $("<div></div>")
-                      .addClass("global-media-item")
-                      .data("asset-data", mediaAsset); // Store the whole asset object
+                      .addClass("global-media-item") // This is your polaroid class
+                      .data("asset-data", mediaAsset); 
 
-        var imageUrl = mediaAsset.image_url || 'img/placeholder.png'; // Fallback placeholder
-        var title = mediaAsset.title || 'Untitled Asset';
+        var imageUrl = mediaAsset.image_url || 'img/placeholder.png'; 
+        // Use admin_title for display if available, otherwise fallback to title (which itself falls back to public_caption)
+        var displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Asset';
                         
         var $img = $("<img>")
                         .attr("src", imageUrl) 
-                        .attr("alt", title);
+                        // Use public_caption or alt_text for actual alt attribute if desired,
+                        // or keep displayTitle for consistency if alt text is often empty.
+                        .attr("alt", mediaAsset.alt_text || displayTitle); 
                         
-        var $titleDiv = $("<div></div>") // Changed variable name
-                        .addClass("media-title")
-                        .text(title);
+        // This div will contain the title shown on the polaroid
+        var $titleDiv = $("<div></div>") 
+                        .addClass("media-title") // Class for the polaroid caption
+                        .text(displayTitle);
         
         $item.append($img).append($titleDiv);
         
@@ -62,16 +63,18 @@ var MediaLibrary = (function(){
             return;
           }
           
-          // imageUrlForCropper should always be the physical file path
           var imageUrlForCropper = assetDataForEditor.image_url; 
-
-          console.log("Opening editor for asset ID:", assetDataForEditor.id, "Physical URL:", imageUrlForCropper, "Asset Title:", assetDataForEditor.title);
+          // The UIE will use assetDataForEditor.admin_title for its main title input
+          
+          console.log("Opening editor for asset ID:", assetDataForEditor.id, 
+                      "Physical URL:", imageUrlForCropper, 
+                      "Admin Title:", assetDataForEditor.admin_title || assetDataForEditor.title);
           console.log("Full Asset Data for Editor:", assetDataForEditor);
           
           if (imageUrlForCropper && assetDataForEditor.id) {
             UnifiedImageEditor.openEditor(
-              imageUrlForCropper,     // Physical file path for Cropper
-              assetDataForEditor,     // Full data of the clicked asset (physical or virtual master)
+              imageUrlForCropper,     
+              assetDataForEditor,     // Pass the whole object
               function() { // onAssetOrVariantSavedCallback
                 console.log("Asset or Variant saved/updated for asset ID:", assetDataForEditor.id, ". Refreshing media library view.");
                 MediaLibrary.loadMedia($(".media-search input").val() || ""); 
@@ -105,10 +108,9 @@ var MediaLibrary = (function(){
       $searchDiv.append($input);
       $("#global-media").before($searchDiv);
     }
-    loadMedia(); // Initial load
+    loadMedia(); 
   }
 
-  // Debounce utility
   function debounce(func, delay) {
     let timeout;
     return function(...args) {
@@ -117,8 +119,6 @@ var MediaLibrary = (function(){
     };
   }
   
-  // Helper function to safely call Notifications or fallback to console/alert
-  // This is duplicated from UnifiedImageEditor.js; ideally, it would be a shared utility.
   const showNotification = (message, type) => {
     if (typeof Notifications !== 'undefined' && Notifications.show) {
       Notifications.show(message, type);
