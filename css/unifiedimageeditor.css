@@ -1,3 +1,5 @@
+/* unifiedimageeditor.css */
+
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css");
 
 /* Container: Full-Screen Overlay */
@@ -35,91 +37,90 @@
   border-bottom: 1px solid #444;
   display: flex;
   align-items: center;
-  justify-content: center;
+	gap: 10px;
+  /* justify-content: center; /* Removed to allow label on left, input taking up space */
 }
+
+.uie-source-label {
+  /* display:none; /* Initially hidden, shown by JS */
+  color: #aaa;
+  font-size: 16px; /* Slightly smaller than main title */
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevent label from shrinking */
+}
+
 .uie-title-input {
-  max-width: 400px;
   background: #1a1a1a;
   border: none;
   color: #fff;
   font-size: 18px;
   font-weight: bold;
-  text-align: center;
   outline: none;
   height: 32px;
   line-height: 32px;
-  margin: 0 auto;
+  flex-grow: 1; /* Allow input to take available space */
+  min-width: 150px; /* Ensure it has some minimum width */
+  margin: 0 !important; /* Adjusted from margin: 0 auto; */
+  /* text-align: center; /* Remove if label is present and you want left-align */
 }
-.uie-source-label {
-  margin-right: 8px;
-  color: #aaa;
-  font-size: 14px;
-}
+
 /* Close Button: absolutely positioned to the right and vertically centered */
 .uie-close-button {
   background: #333;
-  border: 1px solid #444;
-  color: #fff;
-  width: 40px;              /* Increased size */
-	height: calc(100% - 20px);
-  font-size: 20px;          /* Bigger text */
-  cursor: pointer;
+	border: 1px solid #444;
+	color: #fff;
+	font-size: 20px;
+	cursor: pointer;
 	border-radius: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	position: absolute;
-	right: 10px;
-	top: 0;
-	bottom: 0;
-	margin: auto;
+	align-self: stretch;
 }
 
 /* Main Content Area */
 .uie-main-content {
   flex: 1;
   display: flex;
-  overflow: hidden;
+  overflow: hidden; /* Important for layout */
 }
 
 /* Left Column - Image Editing Panel */
 .uie-left-column {
-  flex: 2;
+  flex: 2; /* Takes up more space */
   position: relative;
-  background: #000;
+  background: #000; /* Solid black for image area */
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  padding: 5px;
+  overflow: hidden; /* Crucial for Cropper.js */
+  padding: 5px; /* Small padding around the image editing area */
 }
 .uie-image-editing {
-  position: relative;
+  position: relative; /* For potential overlays or absolute positioned elements within */
+  width: 100%;    /* Ensure it takes full width of its column */
+  height: 100%;   /* Ensure it takes full height of its column */
 }
-.uie-image-editing img {
+.uie-image-editing img#uie-image { /* Target the specific image Cropper uses */
   max-width: 100%;
   max-height: 100%;
-  display: block;
-}
-/* Crop Overlay: darken everything outside the active crop area */
-.uie-crop-overlay {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  pointer-events: none;
+  display: block; /* Cropper.js requirement */
+  /* Cropper.js will handle the actual display size and aspect ratio */
 }
 
 /* Right Column - Control Panel */
 .uie-right-column {
-  flex: 1;
-  background: #1a1a1a;
-  overflow-y: auto;
+  flex: 1; /* Takes less space than the image */
+  background: #1a1a1a; /* Dark background for controls */
+  overflow-y: auto; /* Allow scrolling if content exceeds height */
   padding: 8px;
+  display: flex;
+  flex-direction: column; /* Stack panels vertically */
 }
 
 /* Module Panel Styling */
 .uie-panel {
-  background: #2a2a2a;
+  background: #2a2a2a; /* Slightly lighter than right column bg */
   margin-bottom: 8px;
   border: 1px solid #444;
   display: flex;
@@ -127,7 +128,7 @@
 }
 /* Unified Module Header (Module Title) */
 .uie-panel-header {
-  background: #1a1a1a;
+  background: #1a1a1a; /* Same as right column bg for seamless look */
   padding: 6px 8px;
   border-bottom: 1px solid #444;
   font-size: 14px;
@@ -139,7 +140,7 @@
   padding: 8px;
 }
 /* Input and Textarea Styling */
-.uie-panel-content input,
+.uie-panel-content input[type="text"],
 .uie-panel-content textarea {
   width: 100%;
   background: #333;
@@ -148,6 +149,11 @@
   padding: 6px;
   margin-bottom: 6px;
   font-size: 14px;
+  border-radius: 0; /* No rounded corners for these inputs */
+}
+.uie-panel-content textarea {
+    resize: vertical;
+    min-height: 60px;
 }
 
 /* Tags List & Tag Chips */
@@ -155,29 +161,30 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  margin-top: 4px;
 }
-.uie-tag {
+.uie-tag { /* Individual tag style */
   background: #444;
   border: 1px solid #555;
   padding: 4px 6px;
   font-size: 12px;
   color: #fff;
+  border-radius: 2px;
 }
 
 /* Combined Controls & Presets Panel */
-.uie-controls-presets-panel {
+.uie-controls-presets-panel .uie-controls-presets-content { /* Target the content area */
   display: flex;
-  flex-direction: row;
+  flex-direction: row; /* Side-by-side columns */
+  padding: 0; /* Remove padding if columns handle it */
 }
-.uie-controls-presets-content {
-  display: flex;
-  width: 100%;
-}
+
 /* Left Sub-Panel - Slider Controls */
 .uie-controls-column {
-  flex: 1;
+  flex: 1; /* Adjust flex basis as needed */
   padding: 8px;
-  border-right: 1px solid #444;
+  border-right: 1px solid #444; /* Separator line */
+  min-width: 0;
 }
 .uie-subpanel-header {
   background: #1a1a1a;
@@ -188,236 +195,302 @@
   text-transform: uppercase;
   margin-bottom: 8px;
 }
-.uie-slider {
-  width: 100%;
+.uie-sliders {
+    /* Container for all sliders if needed */
 }
-/* Container for the entire slider row */
+/* Container for the entire slider row (label + input + reset) */
 .uie-slider-label {
   display: flex;
   align-items: center;
   margin-bottom: 8px;  /* spacing between each slider */
+  font-size: 13px;
 }
-
 /* Fixed-width label text for alignment */
 .uie-slider-text {
   width: 80px;        /* adjust this value as needed for consistency */
   font-weight: bold;
-	font-size: 13px;
 }
-
 /* Container for the slider input that grows to fill available space */
 .uie-slider-input-container {
   flex: 1;
   margin: 0 8px;
 }
-
-/* Reset icon container: styled to look like a module container */
+.uie-slider-input-container input[type="range"].uie-slider {
+  width: 100%;
+  margin: 0; /* Remove default margins from range input */
+  padding: 0;
+  vertical-align: middle;
+}
+/* Reset icon container */
 .uie-reset-icon-container {
-  width: 24px;            /* fixed square dimension */
+  width: 24px;            
   height: 24px;
-  border: 1px solid #ccc; /* similar to module container style */
-  background-color: #f5f5f5;
+  border: 1px solid #555; 
+  background-color: #333;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
-
+.uie-reset-icon-container:hover {
+    background-color: #444;
+}
 /* The icon itself */
 .uie-reset-icon {
-  font-size: 14px;        /* size the icon to fit nicely inside the box */
-  color: #666;
+  font-size: 14px;        
+  color: #ccc;
 }
-
-/* Hover effect for extra feedback */
 .uie-reset-icon-container:hover .uie-reset-icon {
-  color: #333;
+  color: #fff;
 }
 
 /* New row for crop and position reset buttons */
 .uie-reset-buttons-row {
   display: flex;
-  justify-content: center;
+  justify-content: center; /* Center buttons in the row */
   gap: 16px;  /* gap between the two buttons */
   margin-top: 12px; /* space above this reset row */
 }
-
 .uie-reset-btn {
-  width: 30px;   /* fixed square size */
+  width: 30px;   
   height: 30px;
-  border: 1px solid #ccc;
-  background-color: #f5f5f5;
+  border: 1px solid #555;
+  background-color: #333;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background-color 0.2s;
 }
-
+.uie-reset-btn:hover {
+    background-color: #444;
+}
 .uie-reset-btn i {
   font-size: 16px;
-  color: #666;
+  color: #ccc;
 }
-
 .uie-reset-btn:hover i {
-  color: #333;
+  color: #fff;
 }
 
 /* Right Sub-Panel - Presets */
 .uie-presets-column {
-  flex: 1;
+  flex: 1; /* Adjust flex basis as needed */
   min-width: 0;  /* Added to constrain shrinking */
   padding: 8px;
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Stack filter and crop presets */
 }
 .uie-presets-row {
   margin-bottom: 8px;
+  display: flex; /* Allow header and scroll to be part of the flex column */
+  flex-direction: column;
+  min-height: 0; /* Important for child flex scrolling */
 }
 .uie-presets-scroll {
   display: flex;
-	flex-wrap: nowrap;
-  overflow-x: auto;
+	flex-wrap: nowrap; /* Prevent wrapping, force scroll */
+  overflow-x: auto; /* Horizontal scroll */
   gap: 8px;
   padding-top: 4px;
 	padding-bottom: 4px;
-	min-width: 0;
+	min-width: 0; /* Ensure it can shrink */
+  flex-shrink: 1; /* Allow this to shrink if space is tight */
 }
 
 /* Action Buttons Panel */
-.uie-actions-panel {
-  background: #2a2a2a;
-  border: 1px solid #444;
+.uie-actions-panel .uie-panel-content {
+  background: #2a2a2a; /* Match panel background */
   padding: 8px;
-  text-align: center;
+  text-align: center; /* Center buttons */
+  display: flex;
+  flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+  justify-content: center;
+  gap: 8px; /* Space between buttons */
 }
 /* Base action button styling */
 .uie-action-button {
   padding: 8px 12px;
-  margin: 4px;
+  /* margin: 4px; /* Replaced by gap */
   cursor: pointer;
   font-size: 14px;
-  border-radius: 0; /* Removed border-radius */
+  border-radius: 0; 
   transition: background 0.2s, border-color 0.2s;
-}
-
-/* Save button styling: a nice blue gradient */
-.uie-save-button {
-  background: linear-gradient(to bottom, #2e80ce, #1e60a7);
-  border: 1px solid #1e60a7;
+  border: 1px solid transparent; /* Base border */
   color: #fff;
 }
 
-.uie-save-button:hover {
+/* Specific button styles */
+.uie-save-source-details-button,
+.uie-update-variant-button {
+  background: linear-gradient(to bottom, #2e80ce, #1e60a7);
+  border-color: #1e60a7;
+}
+.uie-save-source-details-button:hover,
+.uie-update-variant-button:hover {
   background: linear-gradient(to bottom, #3a8bd2, #2070ad);
   border-color: #2070ad;
 }
 
-/* Save as new button styling: a nice green gradient */
-.uie-save-as-new-button {
+.uie-save-as-variant-button,
+.uie-save-as-new-variant-button,
+.uie-save-as-new-image-button {
   background: linear-gradient(to bottom, #37a854, #268f40);
-  border: 1px solid #268f40;
-  color: #fff;
+  border-color: #268f40;
 }
-
-.uie-save-as-new-button:hover {
+.uie-save-as-variant-button:hover,
+.uie-save-as-new-variant-button:hover,
+.uie-save-as-new-image-button:hover {
   background: linear-gradient(to bottom, #41b05a, #2a9947);
   border-color: #2a9947;
+}
+
+/* Image Information Panel */
+.uie-image-info-panel .uie-panel-content p {
+    margin: 0;
+    font-size: 13px;
+    color: #ccc;
+}
+#uie-current-dims {
+    font-weight: bold;
+    color: #fff;
 }
 
 
 /* Bottom Variant Strip */
 .uie-variant-strip {
   display: flex;
-  background: #2a2a2a;
+  background: #2a2a2a; /* Match panel background */
   border-top: 1px solid #444;
   padding: 8px;
+  min-height: 120px; /* Ensure enough height for thumbnails and headers */
 }
 
-/* Bottom Variant Layout Adjustments */
-/* Adjust the Source container to only take as much space as needed with a clear divider */
+/* Source and Variants containers within the strip */
 .uie-variant-source {
-  flex: 0 0 auto;
+  flex: 0 0 auto; /* Don't grow or shrink, size based on content */
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #444; /* Creates separation */
-  padding-right: 8px;           /* Adds some internal spacing */
-  margin-right: 8px;            /* Ensures spacing outside the container */
+  border-right: 1px solid #444; 
+  padding-right: 8px;           
+  margin-right: 8px;            
 }
-
-.uie-thumbnail {
-  margin-top: 4px;
-}
-
-/* Allow the Variants container to fill the remaining space */
 .uie-variant-thumbnails {
-  flex: 1;
-  min-width: 0;  /* Added to ensure the scroll area is constrained */
+  flex: 1; /* Take remaining space */
+  min-width: 0;  /* Important for child flex scrolling */
   display: flex;
   flex-direction: column;
 }
-.uie-variant-source .uie-panel-header,
+.uie-variant-source .uie-panel-header, /* Re-use panel header style */
 .uie-variant-thumbnails .uie-panel-header {
+  background: transparent; /* Or a slightly different shade if preferred */
+  border-bottom: none; /* No border needed here usually */
+  padding: 0 0 4px 0; /* Minimal padding */
+  font-size: 13px;
+  text-transform: uppercase;
+  color: #aaa;
   margin-bottom: 4px;
 }
-
-/* Variant Thumbnails */
 .uie-variant-scroll {
   display: flex;
-	flex-wrap: nowrap;
-  overflow-x: auto;
+	flex-wrap: nowrap; 
+  overflow-x: auto; 
   gap: 8px;
   padding-top: 4px;
 	padding-bottom: 4px;
-	min-width: 0;
+	min-width: 0; 
+  flex-grow: 1; /* Allow scroll area to take available vertical space if needed */
 }
 
-/* Shared container style for image boxes using CSS Grid */
+/* Shared container style for image boxes (Source and Variant thumbnails) */
 .uie-box {
-  width: 80px;
-  height: 80px;
-  padding: 4px;               /* Provides consistent padding */
-  box-sizing: border-box;     /* Padding is included in total dimensions */
+  width: 80px;  /* Fixed width */
+  height: 100px; /* Fixed height to accommodate caption */
+  padding: 4px;               
+  box-sizing: border-box;     
   border: 1px solid #444;
   background: #333;
-  display: grid;
-  grid-template-rows: 1fr auto;  /* Top: image container takes remaining space; bottom: auto-sized caption */
-  overflow: hidden;           /* Ensure content stays within the box */
-  gap: 2px;                   /* Optional gap between rows */
-	flex-shrink: 0;
+  display: flex; /* Use flex for vertical alignment */
+  flex-direction: column; /* Stack image and caption */
+  overflow: hidden;           
+  gap: 4px; /* Gap between image and caption */
+	flex-shrink: 0; /* Prevent shrinking in flex container */
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.uie-box:hover {
+    border-color: #666;
 }
 
-/* Image container occupies the top grid row */
+/* Image container within the box */
 .uie-box > .image-container {
   width: 100%;
-  height: 100%;
-  overflow: hidden;   /* Ensures the image doesn't overflow the allocated cell */
+  height: 70px; /* Fixed height for the image part */
+  overflow: hidden;   
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #222; /* Darker background for image area */
 }
-
 /* Image styling */
-.uie-box > .image-container img {
+.uie-box > .image-container img.uie-box-img {
   width: 100%;
   height: 100%;
-  object-fit: contain;        /* Maintains aspect ratio without stretching */
+  object-fit: contain;        
+  display: block;
 }
-
-/* Shared caption style with multi-line clamp (maximum 2 lines) */
+/* Shared caption style with multi-line clamp */
 .uie-box-caption {
   font-size: 11px;
   color: #ccc;
   text-align: center;
   line-height: 1.2;
-  
-  display: -webkit-box;
-  -webkit-line-clamp: 2;      /* Limits to 2 lines */
-  -webkit-box-orient: vertical;
+  height: 2.4em; /* Approx 2 lines */
   overflow: hidden;
+  text-overflow: ellipsis;
+  /* For multi-line clamp (works in WebKit/Blink) */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;      
+  -webkit-box-orient: vertical;
+}
+
+/* Styling for the active thumbnail box (source or variant) */
+.uie-box.active-variant {
+  border-color: #2e80ce; 
+  box-shadow: 0 0 8px rgba(46, 128, 206, 0.7);
+  background-color: #3a3f4b; 
+}
+.uie-box.active-variant .uie-box-caption {
+    color: #fff; 
+    font-weight: bold;
 }
 
 
-.cropper-modal {
-	opacity: 1 !important; 
-  background-color: rgba(0, 0, 0, 0.95) !important;
+/* Cropper.js specific overrides */
+.uie-left-column .cropper-container {
+    background-image: none; /* Remove default checkerboard from library */
+    background-color: #000; /* Match the left column background explicitly */
 }
-.cropper-face {
-  opacity: 0 !important;
+
+.cropper-modal { /* The dark overlay *outside the crop box* when modal:true (default for drag box) */
+	opacity: 0.95 !important; /* Standard Cropper.js dimming, adjust if needed */
+    background-color: #000 !important; /* Ensure it's black */
+}
+.cropper-face, .cropper-line, .cropper-point {
+  /* These are elements of the crop box itself. Default styling is usually fine. */
+  /* Example: make lines/points more visible if needed */
+  /* background-color: #39f; */
+}
+.cropper-view-box { /* The box showing the image portion that will be cropped */
+    outline: 1px solid #39f; 
+    outline-color: rgba(51, 153, 255, 0.75);
+}
+.cropper-dashed {
+  /* border: 0 dashed #eee; */ 
+}
+
+/* Ensure hidden class works */
+.hidden {
+    display: none !important;
 }
