@@ -1,5 +1,5 @@
 // UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, and crop fixes.
-// Version 2.19: Simplified "Save as New Image" logic - only available from physical master or variant of physical master.
+// Version 2.19 (Continued - Layout Restructure)
 
 const UnifiedImageEditor = (() => {
   'usestrict';
@@ -8,14 +8,17 @@ const UnifiedImageEditor = (() => {
   let initialZoomRatio = 1; 
   let presetsData = [];
 
-  // State variables
+  // State variables for new controls
+  let isAspectRatioLocked = false;
+  let currentLockedAspectRatio = NaN;
+
   let currentMediaAssetId = null;
   let currentMediaAssetAdminTitle = ''; 
   let currentMasterPublicCaption = '';  
   let currentMasterAltText = '';        
   let currentMediaAssetUrl = '';      
-  let currentPhysicalSourceAssetId = null; // ID of the ultimate physical source
-  let isCurrentMasterPhysical = true;      // Flag to check if the loaded master (or variant's master) is physical
+  let currentPhysicalSourceAssetId = null;
+  let isCurrentMasterPhysical = true;   
 
   let currentAssetDefaultCrop = null;   
   let currentAssetDefaultFilters = null; 
@@ -231,20 +234,34 @@ const UnifiedImageEditor = (() => {
 
   const ensureOverlayExists = () => {
     if ($('#uie-overlay').length === 0) {
+      // Main container with new structure: uie-editor-body is now the main flex row container
       const editorHTML = `
         <div id="uie-overlay" class="uie-container hidden">
           <header class="uie-header">
             <span class="uie-source-label" style="display:none; margin-right: 5px; color: #aaa;"></span>
-            <input type="text" class="uie-title-input" value="Image Title"> <button class="uie-close-button">X</button>
+            <input type="text" class="uie-title-input" value="Image Title">
+            <button class="uie-close-button">X</button>
           </header>
-          <div class="uie-main-content">
-            <div class="uie-left-column">
-              <div class="uie-image-editing">
-                <img id="uie-image" src="" alt="Editable Image">
+
+          <div class="uie-editor-body"> <div class="uie-main-image-and-variants-column"> <div class="uie-left-column"> <div class="uie-image-editing">
+                  <img id="uie-image" src="" alt="Editable Image">
+                </div>
+              </div>
+              <div class="uie-variant-strip"> <div class="uie-variant-source">
+                  <div class="uie-panel-header">Source</div>
+                  <div class="uie-thumbnail uie-box" id="uie-source-thumbnail-box">
+                     <div class="image-container"><img class="uie-box-img" src="" alt="Source Thumbnail"></div>
+                     <span class="uie-variant-caption uie-box-caption">Source Image</span> 
+                  </div>
+                </div>
+                <div class="uie-variant-thumbnails">
+                  <div class="uie-panel-header">Variants</div>
+                  <div class="uie-variant-scroll"></div>
+                </div>
               </div>
             </div>
-            <div class="uie-right-column">
-              <div class="uie-panel uie-metadata-panel">
+
+            <div class="uie-right-column"> <div class="uie-panel uie-metadata-panel">
                 <div class="uie-panel-header">Metadata (Public)</div> 
                 <div class="uie-panel-content">
                   <label for="uie-caption-input" class="uie-metadata-label">Caption:</label>
@@ -302,19 +319,6 @@ const UnifiedImageEditor = (() => {
               </div>
             </div>
           </div>
-          <div class="uie-variant-strip">
-            <div class="uie-variant-source">
-              <div class="uie-panel-header">Source</div>
-              <div class="uie-thumbnail uie-box" id="uie-source-thumbnail-box">
-                 <div class="image-container"><img class="uie-box-img" src="" alt="Source Thumbnail"></div>
-                 <span class="uie-variant-caption uie-box-caption">Source Image</span> 
-              </div>
-            </div>
-            <div class="uie-variant-thumbnails">
-              <div class="uie-panel-header">Variants</div>
-              <div class="uie-variant-scroll"></div>
-            </div>
-          </div>
         </div>`;
       $('body').append(editorHTML);
       bindStaticEvents();
@@ -324,12 +328,12 @@ const UnifiedImageEditor = (() => {
   const updateActionButtons = () => {
       $('.uie-save-master-details-button, .uie-save-as-variant-button, .uie-update-variant-button, .uie-save-as-new-variant-button, .uie-save-as-new-image-button').hide();
       
+      const $saveNewImageBtn = $('.uie-save-as-new-image-button');
       if (isEditingMaster) {
           $('.uie-save-master-details-button').show(); 
           $('.uie-save-as-variant-button').show();
-          // Show "Save as New Image" only if the current master is physical
-          if (isCurrentMasterPhysical) {
-            $('.uie-save-as-new-image-button').show(); 
+          if (isCurrentMasterPhysical) { // Only show "Save as New Image" if master is physical
+            $saveNewImageBtn.show(); 
           }
           $('.uie-source-label').hide().empty(); 
           $('#uie-source-thumbnail-box').addClass('active-variant'); 
@@ -337,9 +341,8 @@ const UnifiedImageEditor = (() => {
       } else { // Editing a variant
           $('.uie-update-variant-button').show().text(`Update Variant Details`); 
           $('.uie-save-as-new-variant-button').show();
-          // Show "Save as New Image" only if the variant's master is physical
-          if (isCurrentMasterPhysical) {
-            $('.uie-save-as-new-image-button').show();
+          if (isCurrentMasterPhysical) { // Only show "Save as New Image" if variant's master is physical
+            $saveNewImageBtn.show();
           }
           $('.uie-source-label').show().html(`${currentMediaAssetAdminTitle}&nbsp;&gt;&nbsp;`); 
           $('#uie-source-thumbnail-box').removeClass('active-variant');
@@ -644,24 +647,22 @@ const UnifiedImageEditor = (() => {
                 const container = cropper.getContainerData();
                 const imageW = effectiveCropperSourceDimensions.width;
                 const imageH = effectiveCropperSourceDimensions.height;
-                let fitZoom = 1.0; // Default to 100%
+                let fitZoom = 1.0; 
 
                 if (imageW > 0 && imageH > 0 && container.width > 0 && container.height > 0) {
                     fitZoom = Math.min(container.width / imageW, container.height / imageH);
                 }
                 
-                cropper.zoomTo(fitZoom); // Attempt to zoom to fit ratio
-
-                // Get the actual zoom that Cropper settled on (respecting minCanvas options)
+                cropper.zoomTo(fitZoom); 
+                
                 const actualCanvasAfterInitialZoom = cropper.getCanvasData();
-                if (imageW > 0) {
+                if (imageW > 0) { // Use imageW (natural width of effectiveCropperSource)
                     initialZoomRatio = actualCanvasAfterInitialZoom.width / imageW;
                 } else {
-                    initialZoomRatio = fitZoom; // Fallback
+                    initialZoomRatio = fitZoom; 
                 }
-                console.log("Initial fitRatio commanded:", fitZoom, "Actual initialZoomRatio for slider baseline:", initialZoomRatio);
+                console.log("Initial fitZoom commanded:", fitZoom, "Actual initialZoomRatio for slider baseline:", initialZoomRatio);
 
-                // Center the canvas based on its actual current size
                 cropper.setCanvasData({
                     left: (container.width - actualCanvasAfterInitialZoom.width) / 2,
                     top: (container.height - actualCanvasAfterInitialZoom.height) / 2,
@@ -686,9 +687,8 @@ const UnifiedImageEditor = (() => {
                 } else {
                     console.log("Applying full crop box for master/virtual master.");
                     cropper.setCropBoxData({ left: 0, top: 0, width: imageW,  height: imageH });
-                    // Ensure zoom is set correctly if setData wasn't called
-                    if (!initialSettings) {
-                        cropper.zoomTo(initialZoomRatio); // Re-apply fit zoom for master
+                    if(!initialSettings) { 
+                        cropper.zoomTo(initialZoomRatio); // Re-ensure fit zoom for master
                     }
                 }
                 
@@ -720,16 +720,10 @@ const UnifiedImageEditor = (() => {
         
         const tempContainerEl = document.querySelector('.uie-left-column .uie-image-editing');
         if (tempContainerEl) {
-            if (effectiveCropperSourceDimensions.width <= tempContainerEl.clientWidth && 
-                effectiveCropperSourceDimensions.height <= tempContainerEl.clientHeight) {
-                // Image is smaller than or fits container, constrain minCanvas to actual size
+            if (effectiveCropperSourceDimensions.width < tempContainerEl.clientWidth && 
+                effectiveCropperSourceDimensions.height < tempContainerEl.clientHeight) {
                 cropperOptions.minCanvasWidth = effectiveCropperSourceDimensions.width;
                 cropperOptions.minCanvasHeight = effectiveCropperSourceDimensions.height;
-                console.log("Constraining minCanvas to image dimensions (image fits or is smaller).");
-            } else {
-                 // Image is larger than container, do not set minCanvasWidth/Height
-                 // to allow it to be scaled down to fit.
-                 console.log("Image is larger than container, minCanvas dimensions not constrained by image size.");
             }
         }
 
@@ -760,7 +754,7 @@ const UnifiedImageEditor = (() => {
 
     let imageSrcForCropperToUse;
 
-    if (currentAssetDefaultCrop || currentAssetDefaultFilters) { 
+    if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { // Check if it's a virtual master
         console.log("Resetting to Virtual Master state. Its defaults will be baked into the source for Cropper.");
         try {
             imageSrcForCropperToUse = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
@@ -771,7 +765,7 @@ const UnifiedImageEditor = (() => {
             effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
         }
     } else { 
-        console.log("Resetting to Physical Master state.");
+        console.log("Resetting to Physical Master state (or VM without specific defaults to bake).");
         imageSrcForCropperToUse = currentMediaAssetUrl; 
         effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
     }
@@ -788,9 +782,10 @@ const UnifiedImageEditor = (() => {
     currentMasterPublicCaption = assetDataObj.public_caption || assetDataObj.caption || '';
     currentMasterAltText = assetDataObj.alt_text || '';
 
-    // Determine if the master asset being opened is physical or virtual
-    isCurrentMasterPhysical = (!assetDataObj.physical_source_asset_id || assetDataObj.physical_source_asset_id === assetDataObj.id);
-    console.log("Opening asset. Is master physical?", isCurrentMasterPhysical);
+    isCurrentMasterPhysical = (!assetDataObj.physical_source_asset_id || 
+                             assetDataObj.physical_source_asset_id === assetDataObj.id ||
+                             assetDataObj.physical_source_asset_id === null); // Added null check for safety
+    console.log("Opening asset ID:", assetDataObj.id, "Is master physical?", isCurrentMasterPhysical, "Phys Src ID:", assetDataObj.physical_source_asset_id);
 
 
     currentMediaAssetUrl = physicalImgUrl; 
@@ -835,7 +830,6 @@ const UnifiedImageEditor = (() => {
         let imageSrcToLoadInCropper;
         
         if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
-            // This is a Virtual Master, its defaults should be baked in.
             console.log("Opening Virtual Master: Preparing processed canvas with baked-in defaults.");
             try {
                 imageSrcToLoadInCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
@@ -845,8 +839,8 @@ const UnifiedImageEditor = (() => {
                 imageSrcToLoadInCropper = currentMediaAssetUrl; 
                 effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
             }
-        } else { // This is a Physical Master
-            console.log("Opening Physical Master.");
+        } else { // Physical Master
+            console.log("Opening Physical Master (or VM without defaults to bake).");
             imageSrcToLoadInCropper = currentMediaAssetUrl;
             effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
         }
@@ -1035,16 +1029,15 @@ const UnifiedImageEditor = (() => {
         }
         
         let masterImageSrcForCropper;
-        // When loading a variant, the effectiveCropperSource for display IS the master's processed state.
-        // The effectiveCropperSourceDimensions are those of this master's processed state.
-        if (isCurrentMasterPhysical) { 
-            console.log("Variant's master is Physical. Using direct physical URL for Cropper base.");
-            masterImageSrcForCropper = currentMediaAssetUrl;
-            // effectiveCropperSourceDimensions will be set in initializeCropperInstance based on this.
-        } else { // Master is a Virtual Master
+        if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
             console.log("Variant's master is a Virtual Master. Processing master's defaults for Cropper base.");
             masterImageSrcForCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
-            // effectiveCropperSourceDimensions is set inside getProcessedVirtualMasterCanvasDataUrl
+        } else { 
+            console.log("Variant's master is Physical. Using direct physical URL for Cropper base.");
+            masterImageSrcForCropper = currentMediaAssetUrl;
+            if(!effectiveCropperSourceDimensions.width && activeBaseImageElement) { 
+                effectiveCropperSourceDimensions = {width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight};
+            }
         }
         
         $('.uie-title-input').val(variantAdminTitle); 
@@ -1077,7 +1070,7 @@ const UnifiedImageEditor = (() => {
         const resetTarget = $(this).data('reset-for');
         if (!resetTarget) return;
 
-        if (!cropper && (resetTarget !== 'filters')) { // Filters can be reset even if cropper not fully ready for image ops
+        if (!cropper && (resetTarget !== 'filters')) { 
             showNotification("Editor not ready for reset.", "warning"); return;
         }
         if ((resetTarget !== 'filters') && (!cropper || !cropper.ready)) { 
@@ -1388,12 +1381,8 @@ const UnifiedImageEditor = (() => {
     });
 
     $(document).off('click.uieSaveNewImage').on('click.uieSaveNewImage', '.uie-save-as-new-image-button', function() {
-        if (!isEditingMaster && !isCurrentMasterPhysical) { // Also check if editing a variant of a non-physical master
-            showNotification("Cannot 'Save as New Image' from this context. Please use a physical image as the source or a variant of a physical image.", "warning");
-            return;
-        }
-        if (isEditingMaster && !isCurrentMasterPhysical) { // Editing a virtual master directly
-             showNotification("'Save as New Image' is disabled when editing a Virtual Master. Create variants instead, or use a physical image as source.", "warning");
+        if ((isEditingMaster && !isCurrentMasterPhysical) || (!isEditingMaster && !isCurrentMasterPhysical)) {
+            showNotification("'Save as New Image' is only available when the base image is a physical asset.", "warning");
             return;
         }
 
@@ -1401,15 +1390,12 @@ const UnifiedImageEditor = (() => {
             showNotification("Editor not ready to save new image.", "error"); return;
         }
         
-        // Crop data is always relative to the physical source if this button is enabled
         const finalCropDataForNewMaster = cropper.getData(true); 
         const newMasterDefaultFilters = getCurrentUserAdjustedFiltersObject();
         const newMasterAdminTitle = $('.uie-title-input').val(); 
         const newMasterPublicCaption = $('.uie-caption').val();
         const newMasterAltText = $('.uie-alt-text').val();
 
-        // The source_media_asset_id should be the ultimate physical source.
-        // currentPhysicalSourceAssetId always holds this.
         $.ajax({
             url: 'ajax/saveNewImage.php',
             type: 'POST',
@@ -1429,9 +1415,9 @@ const UnifiedImageEditor = (() => {
                     if (typeof onVariantSavedOrUpdatedCallback === 'function') {
                         onVariantSavedOrUpdatedCallback(); 
                     }
-                    openEditor( // Reload editor with the new virtual master
-                        response.media.image_url, // physical file path for the new VM (same as original physical)
-                        response.media,           // The new virtual master's asset data from response
+                    openEditor(
+                        response.media.image_url, 
+                        response.media,           
                         onVariantSavedOrUpdatedCallback,
                         onEditorClosedCallback
                     );
