@@ -1,5 +1,5 @@
 // UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, and crop fixes.
-// Version 2.19 (Continued - Layout Restructure)
+// Version 2.22 (Crop Reset Fix)
 
 const UnifiedImageEditor = (() => {
   'usestrict';
@@ -80,10 +80,11 @@ const UnifiedImageEditor = (() => {
         const eCtx = emptyCanvas.getContext('2d');
         eCtx.fillStyle = '#555'; eCtx.fillRect(0,0,maxWidth,maxHeight);
         eCtx.fillStyle = '#fff'; eCtx.textAlign = 'center';
+        eCtx.font = '10px Arial';
         eCtx.fillText('No Preview', maxWidth/2, maxHeight/2);
         return emptyCanvas;
     }
-    const scale = Math.min(maxWidth / srcW, maxHeight / srcH);
+    const scale = Math.min(maxWidth / srcW, maxHeight / srcH, 1); // Ensure not to scale up
     const thumbW = Math.round(srcW * scale);
     const thumbH = Math.round(srcH * scale);
     const thumbCanvas = document.createElement('canvas');
@@ -97,22 +98,32 @@ const UnifiedImageEditor = (() => {
   const generateTransformedPreviewCanvas = (physicalImageElementForPreview, masterDefaultCrop, masterDefaultFilters, variantSpecificCrop, variantSpecificFilters) => {
     return new Promise((resolve, reject) => {
         if (!physicalImageElementForPreview || !physicalImageElementForPreview.naturalWidth) {
-            return reject("Physical base image not ready for preview generation.");
+            console.warn("generateTransformedPreviewCanvas: Physical base image not ready.", physicalImageElementForPreview);
+            const errorCanvas = document.createElement('canvas'); errorCanvas.width=1; errorCanvas.height=1;
+            return resolve(errorCanvas); // Resolve with a tiny canvas to prevent downstream errors
         }
 
         let stage1Canvas = document.createElement('canvas');
         let stage1Ctx = stage1Canvas.getContext('2d');
 
-        const cropForStage1 = masterDefaultCrop || { x: 0, y: 0, width: physicalImageElementForPreview.naturalWidth, height: physicalImageElementForPreview.naturalHeight };
-        if (cropForStage1.width <= 0 || cropForStage1.height <= 0) return reject("Master default crop has zero or negative dimensions.");
-
-        stage1Canvas.width = cropForStage1.width;
-        stage1Canvas.height = cropForStage1.height;
-
-        if (masterDefaultFilters) {
-            stage1Ctx.filter = getCssFilterString(masterDefaultFilters);
+        const cropForStage1 = (masterDefaultCrop && masterDefaultCrop.width > 0 && masterDefaultCrop.height > 0) ? 
+                              masterDefaultCrop : 
+                              { x: 0, y: 0, width: physicalImageElementForPreview.naturalWidth, height: physicalImageElementForPreview.naturalHeight };
+        
+        if (cropForStage1.width <= 0 || cropForStage1.height <= 0) {
+            console.warn("generateTransformedPreviewCanvas: Master default crop has zero or negative dimensions.", cropForStage1);
+            // Fallback to full physical image if crop is invalid
+            stage1Canvas.width = physicalImageElementForPreview.naturalWidth;
+            stage1Canvas.height = physicalImageElementForPreview.naturalHeight;
+            if (masterDefaultFilters) stage1Ctx.filter = getCssFilterString(masterDefaultFilters);
+            stage1Ctx.drawImage(physicalImageElementForPreview, 0,0, stage1Canvas.width, stage1Canvas.height);
+        } else {
+            stage1Canvas.width = cropForStage1.width;
+            stage1Canvas.height = cropForStage1.height;
+            if (masterDefaultFilters) stage1Ctx.filter = getCssFilterString(masterDefaultFilters);
+            stage1Ctx.drawImage(physicalImageElementForPreview, cropForStage1.x, cropForStage1.y, cropForStage1.width, cropForStage1.height, 0, 0, cropForStage1.width, cropForStage1.height);
         }
-        stage1Ctx.drawImage(physicalImageElementForPreview, cropForStage1.x, cropForStage1.y, cropForStage1.width, cropForStage1.height, 0, 0, cropForStage1.width, cropForStage1.height);
+
 
         if (!variantSpecificCrop && !variantSpecificFilters) {
             resolve(stage1Canvas);
@@ -122,9 +133,18 @@ const UnifiedImageEditor = (() => {
         let stage2Canvas = document.createElement('canvas');
         let stage2Ctx = stage2Canvas.getContext('2d');
 
-        const cropForStage2 = variantSpecificCrop || { x: 0, y: 0, width: stage1Canvas.width, height: stage1Canvas.height };
-        if (cropForStage2.width <= 0 || cropForStage2.height <= 0) return reject("Variant specific crop has zero or negative dimensions.");
+        const cropForStage2 = (variantSpecificCrop && variantSpecificCrop.width > 0 && variantSpecificCrop.height > 0) ? 
+                              variantSpecificCrop : 
+                              { x: 0, y: 0, width: stage1Canvas.width, height: stage1Canvas.height };
 
+        if (cropForStage2.width <= 0 || cropForStage2.height <= 0) {
+            console.warn("generateTransformedPreviewCanvas: Variant specific crop has zero or negative dimensions.", cropForStage2);
+             // Fallback to stage1 canvas if variant crop is invalid
+            if (variantSpecificFilters) stage1Ctx.filter = getCssFilterString(variantSpecificFilters); // Apply filters to stage1
+            resolve(stage1Canvas); // Resolve with stage1 (potentially with variant filters)
+            return;
+        }
+        
         stage2Canvas.width = cropForStage2.width;
         stage2Canvas.height = cropForStage2.height;
 
@@ -686,7 +706,14 @@ const UnifiedImageEditor = (() => {
                     cropper.setData(initialSettings.crop); 
                 } else {
                     console.log("Applying full crop box for master/virtual master.");
-                    cropper.setCropBoxData({ left: 0, top: 0, width: imageW,  height: imageH });
+                    // For master/virtual master, set crop box to full natural dimensions of the source image Cropper is using.
+                    const currentImageDataForReady = cropper.getImageData();
+                    cropper.setCropBoxData({ 
+                        left: 0, 
+                        top: 0, 
+                        width: currentImageDataForReady.naturalWidth,  
+                        height: currentImageDataForReady.naturalHeight 
+                    });
                     if(!initialSettings) { 
                         cropper.zoomTo(initialZoomRatio); // Re-ensure fit zoom for master
                     }
@@ -770,6 +797,8 @@ const UnifiedImageEditor = (() => {
         effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
     }
     
+    // When resetting to master, we pass null for initialSettings,
+    // so initializeCropperInstance will use its default behavior for masters (full crop box).
     initializeCropperInstance(imageSrcForCropperToUse, null); 
   };
 
@@ -784,7 +813,7 @@ const UnifiedImageEditor = (() => {
 
     isCurrentMasterPhysical = (!assetDataObj.physical_source_asset_id || 
                              assetDataObj.physical_source_asset_id === assetDataObj.id ||
-                             assetDataObj.physical_source_asset_id === null); // Added null check for safety
+                             assetDataObj.physical_source_asset_id === null); 
     console.log("Opening asset ID:", assetDataObj.id, "Is master physical?", isCurrentMasterPhysical, "Phys Src ID:", assetDataObj.physical_source_asset_id);
 
 
@@ -806,7 +835,8 @@ const UnifiedImageEditor = (() => {
     isEditingMaster = true; 
     currentVariantId = null;
 
-    $('#uie-source-thumbnail-box .uie-box-img').attr('src', currentMediaAssetUrl).attr('alt', 'Physical Source Thumbnail');
+    // Clear previous source thumbnail image and set caption
+    $('#uie-source-thumbnail-box .uie-box-img').attr('src', '').attr('alt', 'Loading source preview...');
     $('#uie-source-thumbnail-box .uie-box-caption').text(currentMediaAssetAdminTitle); 
     $('.uie-variant-scroll').empty().html('<p>Loading image for variants...</p>');
     
@@ -827,6 +857,17 @@ const UnifiedImageEditor = (() => {
         activeBaseImageElement = this; 
         console.log("Physical source image preloaded:", activeBaseImageElement.src, activeBaseImageElement.width, activeBaseImageElement.height);
 
+        // Generate and set the UIE Source Thumbnail (with defaults applied)
+        try {
+            const masterPreviewCanvas = await generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, null, null);
+            const scaledThumbCanvas = generateScaledThumbnail(masterPreviewCanvas, 85, 70); // Max width/height for UIE source thumb
+            $('#uie-source-thumbnail-box .uie-box-img').attr('src', scaledThumbCanvas.toDataURL()).attr('alt', 'Source Thumbnail');
+        } catch (thumbError) {
+            console.error("Error generating UIE source thumbnail:", thumbError);
+            $('#uie-source-thumbnail-box .uie-box-img').attr('alt', 'Preview Error');
+        }
+
+
         let imageSrcToLoadInCropper;
         
         if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
@@ -846,6 +887,8 @@ const UnifiedImageEditor = (() => {
         }
         
         $('#uie-overlay').removeClass('hidden').fadeIn(300, () => {
+            // When opening a master (physical or virtual), pass null for initialSettings
+            // so initializeCropperInstance uses its default behavior for masters (full crop box).
             initializeCropperInstance(imageSrcToLoadInCropper, null); 
         });
     };
@@ -854,6 +897,7 @@ const UnifiedImageEditor = (() => {
         console.error("Failed to preload physical source image:", currentMediaAssetUrl);
         showNotification("Error: Could not load the main image. Editor cannot open.", "error");
         activeBaseImageElement = null;
+        $('#uie-source-thumbnail-box .uie-box-img').attr('alt', 'Load Error');
         if (typeof onEditorClosedCallback === 'function') onEditorClosedCallback();
     };
 
@@ -913,13 +957,13 @@ const UnifiedImageEditor = (() => {
         const variantSpecificFilters = variantDetails.filters;
 
         generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, variantSpecificCrop, variantSpecificFilters)
-            .then(previewCanvas => generateScaledThumbnail(previewCanvas))
+            .then(previewCanvas => generateScaledThumbnail(previewCanvas, 85, 70)) // Max width/height for UIE variant thumbs
             .then(scaledThumbCanvas => {
                 $variantBox.find('.uie-box-img').attr('src', scaledThumbCanvas.toDataURL());
             })
             .catch(err => {
                 console.error("Error generating preview for variant box update:", variantId, err);
-                $variantBox.find('.image-container').html('Preview Error').css({'background':'#500', 'color':'white'});
+                $variantBox.find('.image-container').empty().append('<span style="color:red;font-size:9px;">Preview Error</span>');
             });
     } else {
         console.warn("Could not update variant thumbnail in strip. Variant box or base image not ready. Variant ID:", variantId);
@@ -976,13 +1020,13 @@ const UnifiedImageEditor = (() => {
                 variantDetailsParsed.crop,      
                 variantDetailsParsed.filters    
             )
-            .then(previewCanvas => generateScaledThumbnail(previewCanvas))
+            .then(previewCanvas => generateScaledThumbnail(previewCanvas, 85, 70)) // Max width/height for UIE variant thumbs
             .then(scaledThumbCanvas => {
                 $variantBox.find('.uie-box-img').attr('src', scaledThumbCanvas.toDataURL());
             })
             .catch(err => {
                  console.error("Error generating preview for variant box:", variant.id, err);
-                 $variantBox.find('.image-container').html('Preview Error').css({'background':'#500', 'color':'white'});
+                 $variantBox.find('.image-container').empty().append('<span style="color:red;font-size:9px;">Preview Error</span>');
             });
           });
           bindVariantSelectionEvents();
@@ -1092,21 +1136,22 @@ const UnifiedImageEditor = (() => {
             case "crop": 
             case "cropzoom": 
                 if (cropper && cropper.ready) {
-                    cropper.reset(); 
+                    cropper.reset(); // Reset image to initial pan/zoom and crop box to its initial state.
                     
+                    // Recalculate fitZoom based on current container and the image's natural dimensions
                     const container = cropper.getContainerData();
-                    const imageW = effectiveCropperSourceDimensions.width;
-                    const imageH = effectiveCropperSourceDimensions.height;
+                    const imageData = cropper.getImageData(); // Get data about the image Cropper is using
                     
                     let fitRatio = 1;
-                    if (imageW > 0 && imageH > 0 && container.width > 0 && container.height > 0) {
-                        fitRatio = Math.min(container.width / imageW, container.height / imageH);
+                    if (imageData.naturalWidth > 0 && imageData.naturalHeight > 0 && container.width > 0 && container.height > 0) {
+                        fitRatio = Math.min(container.width / imageData.naturalWidth, container.height / imageData.naturalHeight);
                     }
-                    initialZoomRatio = fitRatio; 
+                    initialZoomRatio = fitRatio; // Update initialZoomRatio to current fit
 
-                    cropper.zoomTo(initialZoomRatio); 
+                    cropper.zoomTo(initialZoomRatio); // Zoom image to fit
 
-                    const canvasData = cropper.getCanvasData(); 
+                    // Center the image canvas after zooming
+                    const canvasData = cropper.getCanvasData();
                     cropper.setCanvasData({
                         left: (container.width - canvasData.width) / 2,
                         top: (container.height - canvasData.height) / 2,
@@ -1114,14 +1159,16 @@ const UnifiedImageEditor = (() => {
                         height: canvasData.height 
                     });
 
+                    // Explicitly set the crop box to cover the entire natural dimensions of the image
                     cropper.setCropBoxData({
                         left: 0, 
                         top: 0,
-                        width: effectiveCropperSourceDimensions.width,
-                        height: effectiveCropperSourceDimensions.height
+                        width: imageData.naturalWidth, // Use natural dimensions from Cropper
+                        height: imageData.naturalHeight // Use natural dimensions from Cropper
                     });
-                    cropper.setAspectRatio(NaN); 
-                    $('.uie-slider[data-cropper="zoom"]').val(0); 
+                    
+                    cropper.setAspectRatio(NaN); // Ensure aspect ratio is free
+                    $('.uie-slider[data-cropper="zoom"]').val(0); // Reset zoom slider to 0 (representing 1x of initialZoomRatio)
                     
                     isAspectRatioLocked = false;
                     currentLockedAspectRatio = NaN;
@@ -1169,7 +1216,8 @@ const UnifiedImageEditor = (() => {
                 currentLockedAspectRatio = cropBoxData.width / cropBoxData.height;
                 cropper.setAspectRatio(currentLockedAspectRatio);
             } else { 
-                currentLockedAspectRatio = effectiveCropperSourceDimensions.width / effectiveCropperSourceDimensions.height;
+                const imgData = cropper.getImageData();
+                currentLockedAspectRatio = imgData.naturalWidth / imgData.naturalHeight;
                 cropper.setAspectRatio(currentLockedAspectRatio);
             }
         } else {
@@ -1213,6 +1261,7 @@ const UnifiedImageEditor = (() => {
             data: {
                 media_asset_id: currentMediaAssetId,
                 admin_title: newAdminTitle, 
+                title: newAdminTitle, 
                 public_caption: newPublicCaption, 
                 alt_text: newAltText             
             },
@@ -1262,7 +1311,7 @@ const UnifiedImageEditor = (() => {
             caption: variantPublicCaption,
             altText: variantAltText
         });
-        const variantAdminTitle = (currentMediaAssetAdminTitle || "Image") + " - Variant"; 
+        const variantAdminTitle = ($('.uie-title-input').val() || currentMediaAssetAdminTitle || "Image") + " - Variant"; 
 
         $.ajax({
             url: 'ajax/saveMediaVariant.php', type: 'POST',
