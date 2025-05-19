@@ -150,7 +150,7 @@
 /* Right Column - Control Panel */
 .uie-right-column {
   flex: 1; 
-  min-width: 350px; 
+  min-width: 320px; 
   background: #22252a; 
   overflow-y: auto; 
   padding: 15px; 
@@ -238,42 +238,41 @@
 }
 
 /* Combined Controls & Presets Panel */
-.uie-controls-presets-panel .uie-controls-presets-content { 
+.uie-controls-presets-panel .uie-panel-content { 
   display: flex;
   flex-direction: row; /* This ensures side-by-side layout */
   padding: 0; 
-  width: 100%; 
+  width: 100%; /* Ensure it takes full width of its parent panel */
 }
 
 /* Left Sub-Panel - Slider Controls */
 .uie-controls-column {
   flex: 1; 
-  min-width: 0; /* Allows shrinking */
+  min-width: 0; 
   padding: 12px;
   border-right: 1px solid #3c3f44; 
 }
 /* Right Sub-Panel - Presets */
 .uie-presets-column {
   flex: 1; 
-  min-width: 0;  /* Allows shrinking */
+  min-width: 0;  
   padding: 12px;
   display: flex;
   flex-direction: column; 
 }
 
-/* Subpanel Header - Corrected Background */
+/* Subpanel Header - Now with dark background */
 .uie-subpanel-header {
-  background: #25282c; /* Matching .uie-panel-header background */
-  padding: 8px 10px;   
-  border-bottom: 1px solid #3c3f44; 
-  font-size: 11px;    
+  background: #1a1a1a; /* Dark background like main panel headers */
+  padding: 8px 10px;   /* Consistent padding */
+  border-bottom: 1px solid #3c3f44; /* Consistent border */
+  font-size: 12px;    /* Adjusted to match panel-header if desired, or keep smaller */
   font-weight: 600;
   text-transform: uppercase;
   margin-bottom: 12px;
-  color: #c0c0c0; /* Consistent with panel header text */
+  color: #c0c0c0; 
   letter-spacing: 0.5px;
-  border-top-left-radius: 2px; 
-  border-top-right-radius: 2px;
+  border-radius: 2px; /* Optional: slight rounding for sub-headers too */
 }
 
 .uie-sliders { }
@@ -468,19 +467,17 @@
   display: flex;
   flex-direction: column;
 }
-/* Variant Strip Headers - Corrected Background */
 .uie-variant-source .uie-panel-header, 
 .uie-variant-thumbnails .uie-panel-header {
-  background: #25282c; /* Matching other panel headers */
-  border-bottom: 1px solid #3c3f44; /* Consistent border */
-  padding: 8px 10px; /* Consistent padding */
+  background: transparent; 
+  border-bottom: none; 
+  padding: 0 0 6px 0; 
   font-size: 11px; 
   text-transform: uppercase;
-  color: #c0c0c0; /* Consistent text color */
+  color: #a0a0a0;
   margin-bottom: 6px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  border-radius: 2px; /* Optional rounding */
 }
 .uie-variant-scroll {
   display: flex;
