@@ -1,5 +1,5 @@
 // UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, and crop fixes.
-// Version 2.22 (Crop Reset Fix)
+// Version 2.22 (Crop Reset Fix) - Applying v2.22.3_reset_with_timeout
 
 const UnifiedImageEditor = (() => {
   'usestrict';
@@ -373,8 +373,7 @@ const UnifiedImageEditor = (() => {
     if (!cropper || !cropper.ready) return;
     try {
         const currentImageData = cropper.getImageData(); 
-        if (!currentImageData || !effectiveCropperSourceDimensions.width) return;
-
+        if (!currentImageData || !effectiveCropperSourceDimensions.width || effectiveCropperSourceDimensions.width === 0 || initialZoomRatio === 0 ) return; // Added check for initialZoomRatio
         const currentZoomOfBaseImage = currentImageData.width / effectiveCropperSourceDimensions.width;
         
         let sliderValue = ((currentZoomOfBaseImage / initialZoomRatio) - 1) * 100;
@@ -654,8 +653,9 @@ const UnifiedImageEditor = (() => {
             minCropBoxWidth: 10,
             minCropBoxHeight: 10,
             crop: function(event) {
-                debouncedUpdateThumbnails(); 
-                updateDisplayedDimensions(); 
+                // console.log('CROP EVENT FIRED - Original event type:', event.detail.originalEvent ? event.detail.originalEvent.type : 'N/A', 'Action:', event.detail.action);
+                // debouncedUpdateThumbnails(); 
+                // updateDisplayedDimensions(); 
             },
             ready: function() {
                 if (!cropper) {
@@ -676,7 +676,7 @@ const UnifiedImageEditor = (() => {
                 cropper.zoomTo(fitZoom); 
                 
                 const actualCanvasAfterInitialZoom = cropper.getCanvasData();
-                if (imageW > 0) { // Use imageW (natural width of effectiveCropperSource)
+                if (imageW > 0) { 
                     initialZoomRatio = actualCanvasAfterInitialZoom.width / imageW;
                 } else {
                     initialZoomRatio = fitZoom; 
@@ -705,22 +705,35 @@ const UnifiedImageEditor = (() => {
                     console.log("Applying variant's initial settings (crop & implied zoom/pan):", initialSettings.crop);
                     cropper.setData(initialSettings.crop); 
                 } else {
-                    console.log("Applying full crop box for master/virtual master.");
-                    // For master/virtual master, set crop box to full natural dimensions of the source image Cropper is using.
-                    const currentImageDataForReady = cropper.getImageData();
-                    cropper.setCropBoxData({ 
-                        left: 0, 
-                        top: 0, 
-                        width: currentImageDataForReady.naturalWidth,  
-                        height: currentImageDataForReady.naturalHeight 
-                    });
-                    if(!initialSettings) { 
-                        cropper.zoomTo(initialZoomRatio); // Re-ensure fit zoom for master
+                    // For master/virtual master, define the initial crop DATA as full natural dimensions.
+                    console.log("Applying full natural crop DATA for master/virtual master using setData with effectiveCropperSourceDimensions:", effectiveCropperSourceDimensions);
+                    if (effectiveCropperSourceDimensions.width > 0 && effectiveCropperSourceDimensions.height > 0) {
+                        cropper.setData({
+                            x: 0,
+                            y: 0,
+                            width: effectiveCropperSourceDimensions.width,
+                            height: effectiveCropperSourceDimensions.height
+                        });
+                    } else {
+                        console.error("Ready: effectiveCropperSourceDimensions are invalid. Cannot set initial full crop data.");
+                    }
+                    // Then, ensure the VISUAL crop box matches the fitted canvas.
+                    const canvasForInitialCropBox = cropper.getCanvasData();
+                     if (canvasForInitialCropBox.width > 0 && canvasForInitialCropBox.height > 0) {
+                        cropper.setCropBoxData({
+                            left: canvasForInitialCropBox.left,
+                            top: canvasForInitialCropBox.top,
+                            width: canvasForInitialCropBox.width,
+                            height: canvasForInitialCropBox.height
+                        });
+                        console.log("Ready: Initial visual crop box set to canvas dimensions:", cropper.getCropBoxData());
+                    } else {
+                        console.error("Ready: Canvas for initial crop box has zero dimensions.");
                     }
                 }
                 
                 const currentImageData = cropper.getImageData();
-                if (currentImageData.naturalWidth > 0) { 
+                if (currentImageData.naturalWidth > 0 && initialZoomRatio > 0 ) { 
                     const actualCurrentZoom = currentImageData.width / currentImageData.naturalWidth;
                     let sliderVal = ((actualCurrentZoom / initialZoomRatio) - 1) * 100;
                     
@@ -797,8 +810,6 @@ const UnifiedImageEditor = (() => {
         effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
     }
     
-    // When resetting to master, we pass null for initialSettings,
-    // so initializeCropperInstance will use its default behavior for masters (full crop box).
     initializeCropperInstance(imageSrcForCropperToUse, null); 
   };
 
@@ -835,7 +846,6 @@ const UnifiedImageEditor = (() => {
     isEditingMaster = true; 
     currentVariantId = null;
 
-    // Clear previous source thumbnail image and set caption
     $('#uie-source-thumbnail-box .uie-box-img').attr('src', '').attr('alt', 'Loading source preview...');
     $('#uie-source-thumbnail-box .uie-box-caption').text(currentMediaAssetAdminTitle); 
     $('.uie-variant-scroll').empty().html('<p>Loading image for variants...</p>');
@@ -857,10 +867,9 @@ const UnifiedImageEditor = (() => {
         activeBaseImageElement = this; 
         console.log("Physical source image preloaded:", activeBaseImageElement.src, activeBaseImageElement.width, activeBaseImageElement.height);
 
-        // Generate and set the UIE Source Thumbnail (with defaults applied)
         try {
             const masterPreviewCanvas = await generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, null, null);
-            const scaledThumbCanvas = generateScaledThumbnail(masterPreviewCanvas, 85, 70); // Max width/height for UIE source thumb
+            const scaledThumbCanvas = generateScaledThumbnail(masterPreviewCanvas, 85, 70); 
             $('#uie-source-thumbnail-box .uie-box-img').attr('src', scaledThumbCanvas.toDataURL()).attr('alt', 'Source Thumbnail');
         } catch (thumbError) {
             console.error("Error generating UIE source thumbnail:", thumbError);
@@ -887,8 +896,6 @@ const UnifiedImageEditor = (() => {
         }
         
         $('#uie-overlay').removeClass('hidden').fadeIn(300, () => {
-            // When opening a master (physical or virtual), pass null for initialSettings
-            // so initializeCropperInstance uses its default behavior for masters (full crop box).
             initializeCropperInstance(imageSrcToLoadInCropper, null); 
         });
     };
@@ -957,7 +964,7 @@ const UnifiedImageEditor = (() => {
         const variantSpecificFilters = variantDetails.filters;
 
         generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, variantSpecificCrop, variantSpecificFilters)
-            .then(previewCanvas => generateScaledThumbnail(previewCanvas, 85, 70)) // Max width/height for UIE variant thumbs
+            .then(previewCanvas => generateScaledThumbnail(previewCanvas, 85, 70)) 
             .then(scaledThumbCanvas => {
                 $variantBox.find('.uie-box-img').attr('src', scaledThumbCanvas.toDataURL());
             })
@@ -1020,7 +1027,7 @@ const UnifiedImageEditor = (() => {
                 variantDetailsParsed.crop,      
                 variantDetailsParsed.filters    
             )
-            .then(previewCanvas => generateScaledThumbnail(previewCanvas, 85, 70)) // Max width/height for UIE variant thumbs
+            .then(previewCanvas => generateScaledThumbnail(previewCanvas, 85, 70)) 
             .then(scaledThumbCanvas => {
                 $variantBox.find('.uie-box-img').attr('src', scaledThumbCanvas.toDataURL());
             })
@@ -1136,43 +1143,90 @@ const UnifiedImageEditor = (() => {
             case "crop": 
             case "cropzoom": 
                 if (cropper && cropper.ready) {
-                    cropper.reset(); // Reset image to initial pan/zoom and crop box to its initial state.
-                    
-                    // Recalculate fitZoom based on current container and the image's natural dimensions
-                    const container = cropper.getContainerData();
-                    const imageData = cropper.getImageData(); // Get data about the image Cropper is using
-                    
-                    let fitRatio = 1;
-                    if (imageData.naturalWidth > 0 && imageData.naturalHeight > 0 && container.width > 0 && container.height > 0) {
-                        fitRatio = Math.min(container.width / imageData.naturalWidth, container.height / imageData.naturalHeight);
+                    console.log("--- CROP/ZOOM RESET (v2.22.3_reset_final_logic) START ---");
+                    console.log("Before any action - InitialZoomRatio:", initialZoomRatio);
+                    console.log("Before any action - EffectiveCropperSourceDimensions:", effectiveCropperSourceDimensions);
+                    console.log("Before any action - Canvas Data:", cropper.getCanvasData());
+                    console.log("Before any action - Crop Box Data (visual):", cropper.getCropBoxData());
+                    console.log("Before any action - Crop Data (image relative):", cropper.getData(true));
+
+                    // 1. Reset cropper. This primarily resets the image view (zoom/pan) to its initial state.
+                    //    The crop box data might be set to something unexpected by cropper.reset() itself.
+                    cropper.reset();
+                    console.log("After cropper.reset() - Canvas Data:", cropper.getCanvasData());
+                    console.log("After cropper.reset() - Crop Data (image relative):", cropper.getData(true));
+
+                    // 2. Force the CROP DATA to the full natural dimensions of the *effective source image*.
+                    //    This ensures the underlying data represents the entire image.
+                    if (effectiveCropperSourceDimensions.width > 0 && effectiveCropperSourceDimensions.height > 0) {
+                        cropper.setData({
+                            x: 0,
+                            y: 0,
+                            width: effectiveCropperSourceDimensions.width,
+                            height: effectiveCropperSourceDimensions.height,
+                            rotate: 0, 
+                            scaleX: 1,
+                            scaleY: 1
+                        });
+                        console.log("After forcing setData (to full natural) - Crop Data (image relative):", cropper.getData(true));
+                    } else {
+                        console.error("Reset: effectiveCropperSourceDimensions are invalid. Cannot reliably set full crop data.");
                     }
-                    initialZoomRatio = fitRatio; // Update initialZoomRatio to current fit
-
-                    cropper.zoomTo(initialZoomRatio); // Zoom image to fit
-
-                    // Center the image canvas after zooming
-                    const canvasData = cropper.getCanvasData();
+                    
+                    // 3. Explicitly re-apply the initial fit zoom to the image view.
+                    if (initialZoomRatio > 0 && initialZoomRatio !== Infinity ) {
+                        cropper.zoomTo(initialZoomRatio);
+                    } else {
+                        const container = cropper.getContainerData();
+                        const imgData = cropper.getImageData();
+                        let fitZoom = 1.0;
+                        if (imgData.naturalWidth > 0 && imgData.naturalHeight > 0 && container.width > 0 && container.height > 0) {
+                            fitZoom = Math.min(container.width / imgData.naturalWidth, container.height / imgData.naturalHeight);
+                        }
+                        cropper.zoomTo(fitZoom);
+                        console.warn("Crop Reset: initialZoomRatio was invalid during reset, re-calculated & applied fitZoom:", fitZoom);
+                    }
+                    
+                    // 4. Re-center the image canvas after applying the fit zoom.
+                    const container = cropper.getContainerData(); 
+                    const canvasDataAfterZoom = cropper.getCanvasData();
                     cropper.setCanvasData({
-                        left: (container.width - canvasData.width) / 2,
-                        top: (container.height - canvasData.height) / 2,
-                        width: canvasData.width, 
-                        height: canvasData.height 
+                        left: (container.width - canvasDataAfterZoom.width) / 2,
+                        top: (container.height - canvasDataAfterZoom.height) / 2,
+                        width: canvasDataAfterZoom.width,
+                        height: canvasDataAfterZoom.height
                     });
+                    console.log("After re-zoom & center - Canvas Data:", cropper.getCanvasData());
 
-                    // Explicitly set the crop box to cover the entire natural dimensions of the image
-                    cropper.setCropBoxData({
-                        left: 0, 
-                        top: 0,
-                        width: imageData.naturalWidth, // Use natural dimensions from Cropper
-                        height: imageData.naturalHeight // Use natural dimensions from Cropper
-                    });
-                    
-                    cropper.setAspectRatio(NaN); // Ensure aspect ratio is free
-                    $('.uie-slider[data-cropper="zoom"]').val(0); // Reset zoom slider to 0 (representing 1x of initialZoomRatio)
-                    
+                    // 5. CRITICAL: Set the VISUAL crop box to match the dimensions and position of the
+                    //    currently rendered (and now correctly zoomed/centered) canvas.
+                    //    This uses a setTimeout to allow Cropper.js to potentially finish internal rendering
+                    //    from the previous operations before we make this final visual adjustment.
+                    setTimeout(() => {
+                        if (!cropper || !cropper.ready) return; // Check if cropper still exists
+                        const finalCanvasDataForCropBox = cropper.getCanvasData(); 
+                        if (finalCanvasDataForCropBox.width > 0 && finalCanvasDataForCropBox.height > 0) {
+                            console.log("Reset (in timeout): Setting crop box to final canvas dimensions:", finalCanvasDataForCropBox);
+                            cropper.setCropBoxData({
+                                left: finalCanvasDataForCropBox.left,
+                                top: finalCanvasDataForCropBox.top,
+                                width: finalCanvasDataForCropBox.width,
+                                height: finalCanvasDataForCropBox.height
+                            });
+                            console.log("After setCropBoxData (in timeout) - Visual Crop Box:", cropper.getCropBoxData());
+                            console.log("After setCropBoxData (in timeout) - Crop Data (image relative):", cropper.getData(true));
+                        } else {
+                            console.error("Reset (in timeout): Final canvas data has zero width or height.");
+                        }
+                        updateDisplayedDimensions(); // Update dimensions after this final adjustment
+                    }, 10); // Small delay, can be adjusted or tested with 0.
+
+                    // 6. Update UI elements (aspect ratio, zoom slider)
+                    $('.uie-slider[data-cropper="zoom"]').val(0); 
                     isAspectRatioLocked = false;
                     currentLockedAspectRatio = NaN;
                     updateAspectRatioLockButton();
+                    if(cropper.ready) cropper.setAspectRatio(NaN); 
 
                     if (resetTarget === "crop") { 
                         $('.uie-slider[data-filter="brightness"]').val(100).trigger('input').trigger('change');
@@ -1183,6 +1237,8 @@ const UnifiedImageEditor = (() => {
                     } else {
                         showNotification("Crop & Zoom reset.", "info");
                     }
+                    // updateDisplayedDimensions(); // Moved into the setTimeout
+                    console.log("--- CROP/ZOOM RESET END (sync part) ---");
                 }
                 break;
             case "position":
@@ -1237,10 +1293,19 @@ const UnifiedImageEditor = (() => {
     });
 
     $('.uie-slider[data-cropper="zoom"]').off('input.zoom').on('input.zoom', function() {
-      if (cropper && cropper.ready) {
+      if (cropper && cropper.ready && initialZoomRatio !== 0) { 
         let sliderValue = parseFloat($(this).val()); 
         let newAbsoluteZoomLevel = ((sliderValue / 100) + 1) * initialZoomRatio;
-        cropper.zoomTo(newAbsoluteZoomLevel);
+        if (newAbsoluteZoomLevel > 0) { // Ensure zoom level is positive
+             cropper.zoomTo(newAbsoluteZoomLevel);
+        }
+      } else if (cropper && cropper.ready && initialZoomRatio === 0 ) { // Handle case where initialZoomRatio might be 0
+        let sliderValue = parseFloat($(this).val());
+        // If initialZoomRatio was 0 (e.g. zero dim image), base new zoom on a small default instead
+        let newAbsoluteZoomLevel = ((sliderValue / 100) + 1) * 0.1; // Using 0.1 as a fallback base zoom
+         if (newAbsoluteZoomLevel > 0) {
+            cropper.zoomTo(newAbsoluteZoomLevel);
+        }
       }
     }).off('change.zoom').on('change.zoom', function() {
         debouncedUpdateThumbnails();

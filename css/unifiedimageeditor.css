@@ -145,7 +145,10 @@
 .cropper-face, .cropper-line, .cropper-point {
     background-color: rgba(51, 153, 255, 0.9); 
 }
-
+.cropper-face
+{
+	opacity: 0 !important;
+}
 
 /* Right Column - Control Panel */
 .uie-right-column {
