@@ -1,5 +1,5 @@
 // UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, and crop fixes.
-// Version 2.22 (Crop Reset Fix) - Applying v2.22.3_reset_with_timeout
+// Version 2.22.2 (Accurate Preset Previews)
 
 const UnifiedImageEditor = (() => {
   'usestrict';
@@ -17,18 +17,18 @@ const UnifiedImageEditor = (() => {
   let currentMasterPublicCaption = '';  
   let currentMasterAltText = '';        
   let currentMediaAssetUrl = '';      
-  let currentPhysicalSourceAssetId = null;
-  let isCurrentMasterPhysical = true;   
+  let currentPhysicalSourceAssetId = null; // Stores the ID of the ultimate physical source
+  let isCurrentMasterPhysical = true;   // True if currentMediaAssetId refers to a physical asset
 
-  let currentAssetDefaultCrop = null;   
-  let currentAssetDefaultFilters = null; 
+  let currentAssetDefaultCrop = null;   // Default crop of the master asset (physical or virtual)
+  let currentAssetDefaultFilters = null; // Default filters of the master asset (physical or virtual)
 
   let currentVariantId = null;
-  let isEditingMaster = true;
+  let isEditingMaster = true; // True if master is selected, false if a variant is selected
 
-  let activeBaseImageElement = null; 
-  let effectiveCropperSource = null; 
-  let effectiveCropperSourceDimensions = { width: 0, height: 0 }; 
+  let activeBaseImageElement = null; // The <img/> element holding the *physical* source image
+  let effectiveCropperSource = null; // The dataURL or URL currently loaded *into* Cropper
+  let effectiveCropperSourceDimensions = { width: 0, height: 0 }; // Dimensions of what's in Cropper
 
   let onVariantSavedOrUpdatedCallback = null;
   let onEditorClosedCallback = null;
@@ -435,82 +435,105 @@ const UnifiedImageEditor = (() => {
 
   const generatePresetThumbnail = (preset) => {
     return new Promise((resolve, reject) => {
-      if (!cropper || !cropper.ready) {
-        return reject("generatePresetThumbnail: Cropper not ready.");
-      }
-      let sourceCanvasForPresetThumb; 
-      try {
-        sourceCanvasForPresetThumb = cropper.getCroppedCanvas();
-         if (!sourceCanvasForPresetThumb) return reject("generatePresetThumbnail: Could not get cropped canvas (null).");
-      } catch (e) {
-        return reject("generatePresetThumbnail: Error getting cropped canvas: " + e.message);
-      }
-
-       if (preset.type === 'filter') {
-        try {
-          const details = JSON.parse(preset.preset_details);
-          const presetFilterValues = { 
-            brightness: details.brightness || 100,
-            contrast: details.contrast || 100,
-            saturation: details.saturation || 100,
-            hue: details.hue || 0
-          };
-          let tmpCanvas = document.createElement('canvas');
-          tmpCanvas.width = sourceCanvasForPresetThumb.width;
-          tmpCanvas.height = sourceCanvasForPresetThumb.height;
-          let tmpCtx = tmpCanvas.getContext('2d');
-          tmpCtx.filter = getCssFilterString(presetFilterValues); 
-          tmpCtx.drawImage(sourceCanvasForPresetThumb, 0, 0); 
-          
-          const thumbCanvas = generateScaledThumbnail(tmpCanvas);
-          resolve(thumbCanvas.toDataURL());
-        } catch (err) {
-          console.error("Error parsing filter preset details for '" + preset.name + "':", err, preset.preset_details);
-          reject(err);
+        if (!cropper || !cropper.ready) {
+            return reject("generatePresetThumbnail: Cropper not ready.");
         }
-      } else if (preset.type === 'crop') {
+
+        let baseCanvasForPreset;
         try {
-          const details = JSON.parse(preset.preset_details);
-          const aspectRatioStr = details.aspect_ratio;
-          const parts = aspectRatioStr.split(':');
-          const targetRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
-
-          const baseImageForCropPreset = new Image();
-          baseImageForCropPreset.onload = () => {
-            let tempCroppedCanvas = document.createElement('canvas');
-            let tempCroppedCtx = tempCroppedCanvas.getContext('2d');
-            
-            let newCropWidth, newCropHeight, newCropX, newCropY;
-
-            if (baseImageForCropPreset.width / baseImageForCropPreset.height > targetRatio) {
-                newCropHeight = baseImageForCropPreset.height;
-                newCropWidth = newCropHeight * targetRatio;
-            } else {
-                newCropWidth = baseImageForCropPreset.width;
-                newCropHeight = newCropWidth / targetRatio;
+            // Get the canvas representing the current visual crop in the main editor
+            baseCanvasForPreset = cropper.getCroppedCanvas();
+            if (!baseCanvasForPreset || baseCanvasForPreset.width === 0 || baseCanvasForPreset.height === 0) {
+                return reject("generatePresetThumbnail: Could not get valid base cropped canvas from main cropper.");
             }
-            newCropX = (baseImageForCropPreset.width - newCropWidth) / 2;
-            newCropY = (baseImageForCropPreset.height - newCropHeight) / 2;
-
-            tempCroppedCanvas.width = newCropWidth;
-            tempCroppedCanvas.height = newCropHeight;
-            tempCroppedCtx.drawImage(baseImageForCropPreset, newCropX, newCropY, newCropWidth, newCropHeight, 0, 0, newCropWidth, newCropHeight);
-
-            const thumbCanvas = generateScaledThumbnail(tempCroppedCanvas);
-            resolve(thumbCanvas.toDataURL());
-          };
-          baseImageForCropPreset.onerror = () => reject("Failed to load effectiveCropperSource for crop preset thumbnail");
-          baseImageForCropPreset.src = effectiveCropperSource; 
-
-        } catch (err) {
-          console.error("Error parsing crop preset details for '" + preset.name + "':", err, preset.preset_details);
-          reject(err);
+        } catch (e) {
+            return reject("generatePresetThumbnail: Error getting base cropped canvas: " + e.message);
         }
-      } else {
-        reject("Unknown preset type: " + preset.type);
-      }
+
+        // Create a new canvas to apply current slider filters (if any) to the base crop
+        const currentlyFilteredBaseCanvas = document.createElement('canvas');
+        currentlyFilteredBaseCanvas.width = baseCanvasForPreset.width;
+        currentlyFilteredBaseCanvas.height = baseCanvasForPreset.height;
+        const cfbcCtx = currentlyFilteredBaseCanvas.getContext('2d');
+        
+        const currentSliderFilters = getCurrentUserAdjustedFiltersObject();
+        cfbcCtx.filter = getCssFilterString(currentSliderFilters);
+        cfbcCtx.drawImage(baseCanvasForPreset, 0, 0);
+        // Now, 'currentlyFilteredBaseCanvas' is what the user sees in the crop box with current filters.
+
+        let finalPreviewCanvas = document.createElement('canvas');
+        let finalCtx = finalPreviewCanvas.getContext('2d');
+
+        if (preset.type === 'filter') {
+            try {
+                const presetFilterDetails = JSON.parse(preset.preset_details);
+                const presetFilterValues = {
+                    brightness: presetFilterDetails.brightness || 100,
+                    contrast: presetFilterDetails.contrast || 100,
+                    saturation: presetFilterDetails.saturation || 100,
+                    hue: presetFilterDetails.hue || 0
+                };
+
+                finalPreviewCanvas.width = currentlyFilteredBaseCanvas.width;
+                finalPreviewCanvas.height = currentlyFilteredBaseCanvas.height;
+                
+                // Apply the PRESET's filters on top of the already (slider) filtered base
+                finalCtx.filter = getCssFilterString(presetFilterValues);
+                finalCtx.drawImage(currentlyFilteredBaseCanvas, 0, 0);
+
+            } catch (err) {
+                console.error("Error processing filter preset details for '" + preset.name + "':", err, preset.preset_details);
+                return reject(err);
+            }
+        } else if (preset.type === 'crop') {
+            try {
+                const presetCropDetails = JSON.parse(preset.preset_details);
+                const aspectRatioStr = presetCropDetails.aspect_ratio;
+                const parts = aspectRatioStr.split(':');
+                if (parts.length !== 2) return reject("Malformed aspect ratio string in preset.");
+                
+                const targetRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
+                if (isNaN(targetRatio) || targetRatio <= 0) return reject("Invalid aspect ratio in preset.");
+
+                // The source for the crop preset thumbnail is the 'currentlyFilteredBaseCanvas'
+                const sourceW = currentlyFilteredBaseCanvas.width;
+                const sourceH = currentlyFilteredBaseCanvas.height;
+                
+                let newCropW, newCropH, cropX, cropY;
+
+                if (sourceW / sourceH > targetRatio) { // Source is wider than target ratio
+                    newCropH = sourceH;
+                    newCropW = newCropH * targetRatio;
+                    cropX = (sourceW - newCropW) / 2;
+                    cropY = 0;
+                } else { // Source is taller or same ratio
+                    newCropW = sourceW;
+                    newCropH = newCropW / targetRatio;
+                    cropX = 0;
+                    cropY = (sourceH - newCropH) / 2;
+                }
+                
+                finalPreviewCanvas.width = Math.round(newCropW);
+                finalPreviewCanvas.height = Math.round(newCropH);
+                
+                // Draw the centered crop from the 'currentlyFilteredBaseCanvas'
+                finalCtx.drawImage(currentlyFilteredBaseCanvas, 
+                                   cropX, cropY, newCropW, newCropH,
+                                   0, 0, finalPreviewCanvas.width, finalPreviewCanvas.height);
+            } catch (err) {
+                console.error("Error processing crop preset details for '" + preset.name + "':", err, preset.preset_details);
+                return reject(err);
+            }
+        } else {
+            return reject("Unknown preset type: " + preset.type);
+        }
+        
+        // Generate the small, scaled thumbnail from the 'finalPreviewCanvas'
+        const thumbCanvas = generateScaledThumbnail(finalPreviewCanvas);
+        resolve(thumbCanvas.toDataURL());
     });
-  };
+};
+
 
   const setupPresetSorting = () => {
     $('.uie-filter-presets .uie-presets-scroll, .uie-crop-presets .uie-presets-scroll').sortable({
@@ -538,7 +561,7 @@ const UnifiedImageEditor = (() => {
   debouncedUpdateThumbnails = debounce(() => {
     if (!cropper || !cropper.ready) return;
     updatePresetThumbnails();
-  }, 300); 
+  }, 500); // Increased debounce slightly for potentially more complex rendering
 
   const updatePresetThumbnails = () => {
     $('.uie-preset-box').each(function() {
@@ -588,21 +611,26 @@ const UnifiedImageEditor = (() => {
                 const parts = presetDetails.aspect_ratio.split(':');
                 if (parts.length === 2) {
                     const newAspectRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
-                    if (!isNaN(newAspectRatio)) {
+                    if (!isNaN(newAspectRatio) && newAspectRatio > 0) {
                         cropper.setAspectRatio(newAspectRatio);
-                        const imageData = cropper.getImageData(); 
+                        // Get current canvas data (which reflects zoom and pan of the source image within cropper)
+                        const canvasData = cropper.getCanvasData();
                         
                         let newCropBoxWidth, newCropBoxHeight;
-                        if (imageData.width / imageData.height > newAspectRatio) {
-                           newCropBoxHeight = imageData.height;
+                        // Calculate new crop box dimensions based on the canvasData and target aspect ratio
+                        if (canvasData.width / canvasData.height > newAspectRatio) {
+                           // Canvas is wider than target ratio, so height is limiting
+                           newCropBoxHeight = canvasData.height;
                            newCropBoxWidth = newCropBoxHeight * newAspectRatio;
                         } else {
-                           newCropBoxWidth = imageData.width;
+                           // Canvas is taller or same ratio, so width is limiting
+                           newCropBoxWidth = canvasData.width;
                            newCropBoxHeight = newCropBoxWidth / newAspectRatio;
                         }
+                        // Set the crop box to be centered within the current canvas view
                         cropper.setCropBoxData({
-                            left: (imageData.width - newCropBoxWidth) / 2 + imageData.left,
-                            top: (imageData.height - newCropBoxHeight) / 2 + imageData.top,
+                            left: canvasData.left + (canvasData.width - newCropBoxWidth) / 2,
+                            top: canvasData.top + (canvasData.height - newCropBoxHeight) / 2,
                             width: newCropBoxWidth,
                             height: newCropBoxHeight
                         });
@@ -653,9 +681,12 @@ const UnifiedImageEditor = (() => {
             minCropBoxWidth: 10,
             minCropBoxHeight: 10,
             crop: function(event) {
-                // console.log('CROP EVENT FIRED - Original event type:', event.detail.originalEvent ? event.detail.originalEvent.type : 'N/A', 'Action:', event.detail.action);
-                // debouncedUpdateThumbnails(); 
-                // updateDisplayedDimensions(); 
+                // This 'crop' event fires frequently during user interaction (drag, resize).
+                // For performance, we debounce the thumbnail updates.
+                if (event.detail.originalEvent) { // Only update if it's a user action
+                    debouncedUpdateThumbnails(); 
+                    updateDisplayedDimensions(); 
+                }
             },
             ready: function() {
                 if (!cropper) {
@@ -755,6 +786,8 @@ const UnifiedImageEditor = (() => {
                 loadAndDisplayVariants(currentMediaAssetId);
                 bindPresetEvents();
                 updateActionButtons(); 
+                // Initial call to update thumbnails after everything is ready
+                updatePresetThumbnails(); 
             }
         };
         
@@ -787,6 +820,16 @@ const UnifiedImageEditor = (() => {
     $('.uie-caption').val(currentMasterPublicCaption); 
     $('.uie-alt-text').val(currentMasterAltText);   
 
+    // Update source thumbnail styling based on whether the master is virtual
+    const $sourceThumbBox = $('#uie-source-thumbnail-box');
+    if (!isCurrentMasterPhysical) { // isCurrentMasterPhysical is true if it's a physical master
+      $sourceThumbBox.addClass('uie-source-is-virtual');
+      $sourceThumbBox.attr('title', 'Virtual Master (Source ID: ' + currentPhysicalSourceAssetId + ')');
+    } else {
+      $sourceThumbBox.removeClass('uie-source-is-virtual');
+      $sourceThumbBox.attr('title', 'Physical Master');
+    }
+
     if (!activeBaseImageElement || !activeBaseImageElement.complete || activeBaseImageElement.naturalWidth === 0) {
         showNotification("Cannot reset to master: Base physical image not loaded.", "error");
         return;
@@ -810,7 +853,13 @@ const UnifiedImageEditor = (() => {
         effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
     }
     
+    // Pass null for initialSettings to ensure master's own defaults (if any, baked in above) or natural state is shown
     initializeCropperInstance(imageSrcForCropperToUse, null); 
+    
+    // Ensure active state is correct after reset
+    $('#uie-source-thumbnail-box').addClass('active-variant');
+    $('.uie-variant-box').removeClass('active-variant');
+    updateActionButtons(); 
   };
 
 
@@ -822,14 +871,16 @@ const UnifiedImageEditor = (() => {
     currentMasterPublicCaption = assetDataObj.public_caption || assetDataObj.caption || '';
     currentMasterAltText = assetDataObj.alt_text || '';
 
+    // Determine if the asset being opened is itself a physical or virtual master
     isCurrentMasterPhysical = (!assetDataObj.physical_source_asset_id || 
                              assetDataObj.physical_source_asset_id === assetDataObj.id ||
                              assetDataObj.physical_source_asset_id === null); 
-    console.log("Opening asset ID:", assetDataObj.id, "Is master physical?", isCurrentMasterPhysical, "Phys Src ID:", assetDataObj.physical_source_asset_id);
+    
+    console.log("Opening asset ID:", assetDataObj.id, "Is this asset physical?", isCurrentMasterPhysical, "Phys Src ID for this asset:", assetDataObj.physical_source_asset_id);
 
+    currentMediaAssetUrl = physicalImgUrl; // This is ALWAYS the URL of the ultimate physical file
+    currentPhysicalSourceAssetId = isCurrentMasterPhysical ? assetDataObj.id : assetDataObj.physical_source_asset_id;
 
-    currentMediaAssetUrl = physicalImgUrl; 
-    currentPhysicalSourceAssetId = assetDataObj.physical_source_asset_id || assetDataObj.id;
 
     try {
         currentAssetDefaultCrop = (assetDataObj.default_crop && assetDataObj.default_crop !== "null" && assetDataObj.default_crop.trim() !== "") ? JSON.parse(assetDataObj.default_crop) : null;
@@ -867,7 +918,18 @@ const UnifiedImageEditor = (() => {
         activeBaseImageElement = this; 
         console.log("Physical source image preloaded:", activeBaseImageElement.src, activeBaseImageElement.width, activeBaseImageElement.height);
 
+        // Apply styling to source thumbnail based on whether the loaded asset is virtual
+        const $sourceThumbBox = $('#uie-source-thumbnail-box');
+        if (!isCurrentMasterPhysical) { // If it's NOT physical, it's virtual
+          $sourceThumbBox.addClass('uie-source-is-virtual');
+          $sourceThumbBox.attr('title', 'Virtual Master (Physical Source ID: ' + currentPhysicalSourceAssetId + ')');
+        } else {
+          $sourceThumbBox.removeClass('uie-source-is-virtual');
+          $sourceThumbBox.attr('title', 'Physical Master');
+        }
+
         try {
+            // The preview for the master source thumbnail should reflect ITS OWN default_crop and filter_state
             const masterPreviewCanvas = await generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, null, null);
             const scaledThumbCanvas = generateScaledThumbnail(masterPreviewCanvas, 85, 70); 
             $('#uie-source-thumbnail-box .uie-box-img').attr('src', scaledThumbCanvas.toDataURL()).attr('alt', 'Source Thumbnail');
@@ -879,8 +941,9 @@ const UnifiedImageEditor = (() => {
 
         let imageSrcToLoadInCropper;
         
+        // If the master asset being loaded is VIRTUAL and has its own defaults, bake them in for Cropper.
         if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
-            console.log("Opening Virtual Master: Preparing processed canvas with baked-in defaults.");
+            console.log("Opening Virtual Master: Preparing processed canvas with its baked-in defaults.");
             try {
                 imageSrcToLoadInCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
             } catch (processingError) {
@@ -889,13 +952,14 @@ const UnifiedImageEditor = (() => {
                 imageSrcToLoadInCropper = currentMediaAssetUrl; 
                 effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
             }
-        } else { // Physical Master
+        } else { // Physical Master (or a Virtual Master that has no specific defaults to bake, so it acts like its physical source initially)
             console.log("Opening Physical Master (or VM without defaults to bake).");
             imageSrcToLoadInCropper = currentMediaAssetUrl;
             effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
         }
         
         $('#uie-overlay').removeClass('hidden').fadeIn(300, () => {
+            // Pass null for initialSettings because we are loading the master; its defaults (if any) are already baked into imageSrcToLoadInCropper if it was virtual.
             initializeCropperInstance(imageSrcToLoadInCropper, null); 
         });
     };
@@ -1060,7 +1124,12 @@ const UnifiedImageEditor = (() => {
     $('.uie-variant-scroll').off('click.variantBox').on('click.variantBox', '.uie-variant-box', async function() {
       const $this = $(this);
       
-      $('#uie-source-thumbnail-box').removeClass('active-variant');
+      $('#uie-source-thumbnail-box').removeClass('active-variant uie-source-is-virtual'); // Also remove virtual class from source if it was there
+      // Re-apply virtual styling to source if the master IS virtual, even when a variant is selected
+      if (!isCurrentMasterPhysical) {
+          $('#uie-source-thumbnail-box').addClass('uie-source-is-virtual');
+      }
+
       $('.uie-variant-box').removeClass('active-variant');
       $this.addClass('active-variant'); 
 
@@ -1080,11 +1149,13 @@ const UnifiedImageEditor = (() => {
         }
         
         let masterImageSrcForCropper;
+        // When loading a variant, the Cropper base is ALWAYS derived from the master's state.
+        // If master is virtual, its defaults are baked in. If physical, it's the raw physical.
         if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
             console.log("Variant's master is a Virtual Master. Processing master's defaults for Cropper base.");
             masterImageSrcForCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
         } else { 
-            console.log("Variant's master is Physical. Using direct physical URL for Cropper base.");
+            console.log("Variant's master is Physical (or VM without defaults). Using direct physical URL for Cropper base.");
             masterImageSrcForCropper = currentMediaAssetUrl;
             if(!effectiveCropperSourceDimensions.width && activeBaseImageElement) { 
                 effectiveCropperSourceDimensions = {width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight};
@@ -1096,6 +1167,8 @@ const UnifiedImageEditor = (() => {
         $('.uie-alt-text').val(variantDetails.altText || ''); 
         updateActionButtons(); 
         
+        // Initialize cropper with the (potentially processed) master image,
+        // then apply the variant's specific crop and filters.
         initializeCropperInstance(masterImageSrcForCropper, {
             crop: variantDetails.crop, 
             filters: variantDetails.filters 
@@ -1289,6 +1362,8 @@ const UnifiedImageEditor = (() => {
           $('#uie-image, .cropper-view-box img').css("filter", getCssFilterString(getCurrentUserAdjustedFiltersObject()));
       }
     }).off('change.filter').on('change.filter', function() {
+      // This 'change' event fires when the user releases the mouse from the slider.
+      // This is a good time to update the more expensive preset thumbnails.
       debouncedUpdateThumbnails();
     });
 
@@ -1308,6 +1383,7 @@ const UnifiedImageEditor = (() => {
         }
       }
     }).off('change.zoom').on('change.zoom', function() {
+        // Also update thumbnails on zoom change (release)
         debouncedUpdateThumbnails();
     });
 
@@ -1529,9 +1605,10 @@ const UnifiedImageEditor = (() => {
                     if (typeof onVariantSavedOrUpdatedCallback === 'function') {
                         onVariantSavedOrUpdatedCallback(); 
                     }
+                    // Reload the editor with the newly created virtual master
                     openEditor(
-                        response.media.image_url, 
-                        response.media,           
+                        response.media.image_url, // This should be the physical_file_path from the new virtual master's record
+                        response.media,           // The full new media asset object for the virtual master
                         onVariantSavedOrUpdatedCallback,
                         onEditorClosedCallback
                     );

@@ -455,6 +455,7 @@
   padding: 10px;
   min-height: 130px; 
   flex-shrink: 0; 
+  align-items: flex-start; /* Vertically align the source and variants sections to their tops */
 }
 
 .uie-variant-source {
@@ -474,24 +475,24 @@
 /* Variant Strip Headers - Corrected Background */
 .uie-variant-source .uie-panel-header, 
 .uie-variant-thumbnails .uie-panel-header {
-  background: #25282c; /* Matching other panel headers */
-  border-bottom: 1px solid #3c3f44; /* Consistent border */
-  padding: 8px 10px; /* Consistent padding */
+  background: #25282c; 
+  border-bottom: 1px solid #3c3f44; 
+  padding: 8px 10px; 
   font-size: 11px; 
   text-transform: uppercase;
-  color: #c0c0c0; /* Consistent text color */
-  margin-bottom: 6px;
+  color: #c0c0c0; 
+  margin-bottom: 6px; /* This space is now consistent above source thumb and variant scroll area */
   font-weight: 600;
   letter-spacing: 0.5px;
-  border-radius: 2px; /* Optional rounding */
+  border-radius: 2px; 
 }
 .uie-variant-scroll {
   display: flex;
 	flex-wrap: nowrap; 
   overflow-x: auto; 
   gap: 10px; 
-  padding-top: 5px;
-	padding-bottom: 5px;
+  /* padding-top: 5px; --- REMOVED to align with source thumbnail more closely */
+	padding-bottom: 5px; /* Keep padding at bottom for scrollbar room if needed */
 	min-width: 0; 
   flex-grow: 1; 
 }
@@ -511,6 +512,7 @@
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
   border-radius: 4px; 
+  position: relative; 
 }
 .uie-box:hover {
     border-color: #555; 
@@ -526,6 +528,7 @@
   justify-content: center;
   background-color: #181818; 
   border-radius: 3px; 
+  position: relative; 
 }
 .uie-box > .image-container img.uie-box-img {
   width: 100%;
@@ -547,7 +550,7 @@
 }
 
 .uie-box.active-variant {
-  border-color: #007bff; 
+  border-color: #007bff !important; 
   box-shadow: 0 0 10px rgba(0, 123, 255, 0.6);
   background-color: #303840; 
 }
@@ -555,6 +558,33 @@
     color: #fff; 
     font-weight: 600; 
 }
+
+/* Styling for the UIE source thumbnail when it represents a virtual master */
+.uie-variant-source .uie-box.uie-source-is-virtual {
+  border-left: 5px solid #007bff; 
+  /* Adjust padding-left to compensate for the thicker border to keep content aligned */
+  /* Original padding: 5px. Original border-left: 2px. New border-left: 5px. Difference: 3px. */
+  /* New padding-left = 5px - (5px - 2px) = 2px */
+  padding-left: 2px; 
+}
+
+.uie-variant-source .uie-box.uie-source-is-virtual > .image-container::after {
+    content: "\f0c1"; 
+    font-family: "Font Awesome 5 Free"; 
+    font-weight: 900; 
+    position: absolute;
+    bottom: 5px; 
+    right: 5px;  
+    font-size: 11px; 
+    color: #ffffff;
+    background-color: rgba(0, 123, 255, 0.75);
+    padding: 2px 4px;
+    border-radius: 3px;
+    line-height: 1;
+    z-index: 10; 
+    pointer-events: none;
+}
+
 
 .hidden {
     display: none !important;
