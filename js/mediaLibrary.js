@@ -1,5 +1,5 @@
 // js/mediaLibrary.js
-// Version 2.24 (Show Variants Functionality)
+// Version 2.24.1 (Corrected UIE Click Handler for Variants)
 var MediaLibrary = (function($){ 
 
   const getCssFilterStringForLibrary = (filtersObject) => {
@@ -38,7 +38,6 @@ var MediaLibrary = (function($){
     return thumbCanvas;
   };
 
-  // Function to load media with search query, tag filter, and show_variants flag
   function loadMedia(query = "", tagFilter = "", showVariants = false) {
     $('#global-media').html('<p>Loading media...</p>'); 
     $.ajax({
@@ -47,7 +46,7 @@ var MediaLibrary = (function($){
       data: { 
         q: query,
         tag_filter: tagFilter,
-        show_variants: showVariants // New parameter
+        show_variants: showVariants 
       },
       dataType: "json",
       success: function(response) {
@@ -78,29 +77,28 @@ var MediaLibrary = (function($){
       mediaArray.forEach(function(mediaAsset) { 
         var $item = $("<div></div>")
                       .addClass("global-media-item") 
-                      .data("asset-data", mediaAsset); // Store the whole asset (master or variant)
+                      .data("asset-data", mediaAsset); 
 
         const isVirtualMaster = mediaAsset.physical_source_asset_id &&
                                 mediaAsset.physical_source_asset_id !== mediaAsset.id &&
                                 mediaAsset.physical_source_asset_id !== null &&
-                                !mediaAsset.is_variant; // Ensure it's not a variant itself being misidentified
+                                !mediaAsset.is_variant; 
 
         const isVariant = mediaAsset.is_variant === true || mediaAsset.is_variant === "true";
+        let displayTitle = '';
 
 
         if (isVariant) {
             $item.addClass("variant-asset");
-            // Title for variant: "Master Title > Variant Name"
-            // Assuming mediaAsset.master_admin_title and mediaAsset.variant_type are sent from PHP
-            let masterTitle = mediaAsset.master_admin_title || `Master ${mediaAsset.media_asset_id}`;
-            let variantTitle = mediaAsset.variant_type || `Variant ${mediaAsset.id}`;
-            $item.attr("title", `Variant of '${masterTitle}' (ID: ${mediaAsset.id}, Master ID: ${mediaAsset.media_asset_id})`);
-            displayTitle = `${masterTitle} > ${variantTitle}`;
+            let masterTitle = mediaAsset.master_admin_title || `Master ${mediaAsset.media_asset_id_for_variant}`;
+            let variantTitleText = mediaAsset.variant_type || `Variant ${mediaAsset.variant_id}`;
+            $item.attr("title", `Variant: ${variantTitleText} (of Master: '${masterTitle}')`);
+            displayTitle = `${masterTitle} > ${variantTitleText}`;
         } else if (isVirtualMaster) {
             $item.addClass("virtual-asset");
-            $item.attr("title", "Virtual Asset (Source ID: " + mediaAsset.physical_source_asset_id + ")");
             displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Virtual Master';
-        } else { // Physical Master
+            $item.attr("title", `Virtual Master (Source ID: ${mediaAsset.physical_source_asset_id}) - ${displayTitle}`);
+        } else { 
             $item.attr("title", "Physical Asset");
             displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Physical Asset';
         }
@@ -119,31 +117,20 @@ var MediaLibrary = (function($){
         $item.on("click", function(){
           var assetDataForEditor = $(this).data("asset-data");
           
-          if (!assetDataForEditor || !assetDataForEditor.id) {
-            showNotification("Error: Media asset data is incomplete.", "error");
-            console.warn("Incomplete asset data for item:", $(this));
+          if (!assetDataForEditor) { // Simplified check
+            showNotification("Error: Media asset data is missing for this item.", "error");
+            console.warn("Missing asset data for item:", $(this));
             return;
           }
+          // ID check will happen after masterAssetDataToLoadInUIE is formed
           
-          // If it's a variant, we need to load its master asset data for the UIE
-          // but tell UIE which variant to potentially pre-select or focus on.
-          // For now, UIE always opens the master. The UIE itself handles variant selection.
-          // The key is to pass the correct master asset data to UIE.
-          
-          let masterAssetDataToLoadInUIE = assetDataForEditor;
-          let physicalUrlForUIE = assetDataForEditor.image_url; // This should always be the physical path
+          let masterAssetDataToLoadInUIE;
+          let physicalUrlForUIE = assetDataForEditor.image_url; 
 
           if (assetDataForEditor.is_variant) {
-            // Construct a "master-like" object to open the UIE with the master's context.
-            // The actual master asset data (including its default_crop, filter_state, source_url, attribution)
-            // should ideally be part of the variant's data from getGlobalMedia.php or fetched separately.
-            // For simplicity now, we assume `assetDataForEditor` for a variant *contains* enough
-            // master info (like `master_physical_url`, `master_default_crop`, etc.)
-            // OR, we make another call to get the master asset if UIE strictly needs it.
-            // Let's assume getGlobalMedia.php now returns master's core details along with variant.
-            
+            // When a variant is clicked, construct the object for its MASTER asset to open in UIE
             masterAssetDataToLoadInUIE = {
-                id: assetDataForEditor.media_asset_id, // Master's ID
+                id: assetDataForEditor.media_asset_id_for_variant, // CRITICAL: Use the master's ID
                 admin_title: assetDataForEditor.master_admin_title,
                 public_caption: assetDataForEditor.master_public_caption,
                 alt_text: assetDataForEditor.master_alt_text,
@@ -151,32 +138,41 @@ var MediaLibrary = (function($){
                 attribution: assetDataForEditor.master_attribution,
                 default_crop: assetDataForEditor.master_default_crop,
                 filter_state: assetDataForEditor.master_filter_state,
-                physical_source_asset_id: assetDataForEditor.master_physical_source_asset_id, // Master's physical source
-                image_url: assetDataForEditor.image_url // Physical image URL (same for master and variant)
-                // Add any other fields UIE expects for a master asset
+                physical_source_asset_id: assetDataForEditor.master_physical_source_asset_id, 
+                image_url: assetDataForEditor.image_url // This is the physical image URL, same for master & variant
             };
-            console.log("Clicked a VARIANT. Opening its MASTER in UIE:", masterAssetDataToLoadInUIE);
+            console.log("Clicked a VARIANT. Preparing its MASTER for UIE:", masterAssetDataToLoadInUIE);
           } else {
+             // If it's not a variant, it's a master (physical or virtual)
+             masterAssetDataToLoadInUIE = assetDataForEditor;
              console.log("Clicked a MASTER. Opening in UIE:", masterAssetDataToLoadInUIE);
           }
           
-          if (physicalUrlForUIE && masterAssetDataToLoadInUIE.id) {
-            UnifiedImageEditor.openEditor(
-              physicalUrlForUIE,     
-              masterAssetDataToLoadInUIE, // Pass the (potentially reconstructed) master asset data
-              function() { 
-                const currentQuery = $('#media-search-input').val();
-                const currentTagFilter = $('#media-tag-filter').val();
-                const currentShowVariants = $('#media-show-variants').is(':checked');
-                MediaLibrary.loadMedia(currentQuery, currentTagFilter, currentShowVariants); 
-              },
-              function() { 
-                console.log("Unified Image Editor was closed.");
-              }
-            );
-          } else {
-            showNotification("Error: Missing physical image URL or Master Asset ID for UIE.", "error");
+          // Now check if the data to load into UIE is valid
+          if (!masterAssetDataToLoadInUIE || !masterAssetDataToLoadInUIE.id) {
+            showNotification("Error: Could not determine master asset data to open in editor.", "error");
+            console.error("Master asset data for UIE is invalid:", masterAssetDataToLoadInUIE);
+            return;
           }
+          if (!physicalUrlForUIE) {
+            showNotification("Error: Missing physical image URL for editor.", "error");
+            console.error("Physical URL for UIE is missing. Master Data:", masterAssetDataToLoadInUIE);
+            return;
+          }
+          
+          UnifiedImageEditor.openEditor(
+            physicalUrlForUIE,     
+            masterAssetDataToLoadInUIE, 
+            function() { 
+              const currentQuery = $('#media-search-input').val();
+              const currentTagFilter = $('#media-tag-filter').val();
+              const currentShowVariants = $('#media-show-variants').is(':checked');
+              MediaLibrary.loadMedia(currentQuery, currentTagFilter, currentShowVariants); 
+            },
+            function() { 
+              console.log("Unified Image Editor was closed.");
+            }
+          );
         });        
         $globalMedia.append($item);
 
@@ -188,11 +184,9 @@ var MediaLibrary = (function($){
             let filtersToApply = null;
 
             if (isVariant && mediaAsset.variant_details_parsed) {
-                // For variants, use their specific crop and filters
                 cropToUse = mediaAsset.variant_details_parsed.crop;
                 filtersToApply = mediaAsset.variant_details_parsed.filters;
             } else {
-                // For masters (physical or virtual), use their default_crop and filter_state
                 try {
                     if (mediaAsset.default_crop && mediaAsset.default_crop !== "null" && mediaAsset.default_crop.trim() !== "") {
                         cropToUse = JSON.parse(mediaAsset.default_crop);
@@ -205,11 +199,9 @@ var MediaLibrary = (function($){
                 }
             }
             
-            // Fallback to full image if no valid crop defined
-            if (!cropToUse || cropToUse.width <= 0 || cropToUse.height <= 0) {
+            if (!cropToUse || typeof cropToUse.width !== 'number' || typeof cropToUse.height !== 'number' || cropToUse.width <= 0 || cropToUse.height <= 0) {
                 cropToUse = { x: 0, y: 0, width: physicalImg.naturalWidth, height: physicalImg.naturalHeight };
             }
-
 
             if (physicalImg.naturalWidth === 0 || physicalImg.naturalHeight === 0) {
                  console.warn("Media library thumbnail: Physical image has zero dimensions for asset", mediaAsset.id);
@@ -221,6 +213,16 @@ var MediaLibrary = (function($){
             
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
+
+            // Ensure crop dimensions are valid before setting canvas size
+            if (cropToUse.width <= 0 || cropToUse.height <= 0) {
+                console.warn("Corrected invalid crop dimensions to full image for asset:", mediaAsset.id);
+                cropToUse.width = physicalImg.naturalWidth;
+                cropToUse.height = physicalImg.naturalHeight;
+                cropToUse.x = 0;
+                cropToUse.y = 0;
+            }
+
             tempCanvas.width = cropToUse.width;
             tempCanvas.height = cropToUse.height;
 
@@ -289,7 +291,6 @@ var MediaLibrary = (function($){
         loadMedia(query, tagFilter, showVariants);
     });
 
-    // Event listener for the "Show Variants" checkbox
     $('#media-show-variants').on("change", function(){
         const showVariants = $(this).is(':checked');
         const query = $('#media-search-input').val();
@@ -298,7 +299,7 @@ var MediaLibrary = (function($){
     });
     
     loadTagFilters();
-    loadMedia("", "", false); // Initial load: no query, no tag filter, don't show variants by default
+    loadMedia("", "", false); 
   }
 
   function debounce(func, delay) {
