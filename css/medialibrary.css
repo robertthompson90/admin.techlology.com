@@ -44,105 +44,200 @@
   color: #aaa;
 }
 
-/* Styling for the search box for medialibrary page */
-.media-library-page .media-search {
+/* =============================
+   MEDIA LIBRARY FILTERS & CONTROLS
+============================= */
+.media-filters {
   margin-bottom: 20px;
-}
-.media-library-page .media-search input {
-  width: 100%;
-  max-width: 300px;
-  padding: 8px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: #0f1117;
-  color: #e1e1e1;
+  padding: 10px 15px; 
+  background-color: #2a2e3a; 
+  border-radius: 6px;
+  display: flex;
+  gap: 15px; /* Gap between filter groups */
+  align-items: center; /* Vertically align items in the filter bar */
+  flex-wrap: wrap; 
 }
 
-/* Media Grid for Global Media Library */
+.media-filters > div { /* Target direct div children (each filter group) */
+  display: flex;
+  align-items: center; /* Align label and input/select within each group */
+  gap: 8px; 
+}
+
+.media-filters label {
+  font-weight: bold;
+  color: #ccc;
+  white-space: nowrap; 
+  display: inline; 
+  margin: 0; 
+  padding: 0; 
+  line-height: 38px; 
+}
+
+/* Specific styling for checkbox label to ensure it aligns well */
+.media-filters label[for="media-show-variants"] {
+  line-height: normal; /* Override the 38px for checkbox label if needed */
+  cursor: pointer;
+}
+
+.media-filters input[type="checkbox"] {
+  margin-right: 4px; /* Space between checkbox and its label */
+  width: auto; /* Override global input width */
+  height: auto; /* Override global input height */
+  min-width: unset; /* Override min-width */
+  vertical-align: middle; /* Helps align checkbox with text */
+}
+
+
+.media-filters select, 
+.media-filters input[type="text"] { 
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid #444;
+  background-color: #1f222b; 
+  color: #e1e1e1;
+  min-width: 200px; 
+  font-size: 14px; 
+  height: 38px; 
+  box-sizing: border-box; 
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.media-filters .upload-btn { 
+  margin-left: auto; 
+  padding: 8px 15px; 
+  background-color: #007bff; 
+  border: 1px solid #0069d9; 
+  color: #fff; 
+  height: 38px; 
+  box-sizing: border-box;
+  line-height: normal; 
+  display: inline-flex; 
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.media-filters .upload-btn:hover {
+  background-color: #0069d9;
+  border-color: #0056b3;
+}
+
+/* =============================
+   MEDIA GRID & ITEMS
+============================= */
 #global-media {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px; /* Spacing between items */
+  gap: 20px; 
 }
 
 /* Media Item (polaroid-style) for medialibrary page */
 .global-media-item {
-  width: 150px; /* Fixed width for each item */
+  width: 150px; 
   background: #2b2e36;
   border: 1px solid #444;
   border-radius: 6px;
   padding: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-  position: relative; /* For positioning pseudo-elements or badges */
+  position: relative; 
   display: flex;
   flex-direction: column;
-  align-items: center;
-  transition: border-color 0.2s ease-in-out; /* Smooth transition for hover/active states */
+  align-items: center; 
+  transition: border-color 0.2s ease-in-out, transform 0.2s ease-in-out; 
 }
+.global-media-item:hover {
+  border-color: #888;
+  cursor: pointer;
+  transform: translateY(-2px); 
+}
+
 .global-media-item .image-container {
-  width: 100%;
-  height: 100px; /* Fixed height for the image part */
-  background-color: #222; /* Placeholder background */
+  width: 100%; 
+  height: 100px; 
+  background-color: #222; 
   border-radius: 4px;
-  margin-bottom: 8px;
-  display: flex; /* For centering loading/error states */
+  margin-bottom: 8px; 
+  display: flex; 
   align-items: center;
   justify-content: center;
-  overflow: hidden; /* Ensure image doesn't overflow container */
-  position: relative; /* For ::after pseudo-element if used for icon */
+  overflow: hidden; 
+  position: relative; 
 }
 
 .global-media-item .image-container img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Cover ensures the image fills the container, cropping if necessary */
-  /* object-fit: contain; /* Use 'contain' if you want to see the whole image, letterboxed */
-  display: block; /* Remove extra space below image */
+  max-width: 100%;  
+  max-height: 100%; 
+  width: auto;      
+  height: auto;     
+  object-fit: contain; 
+  display: block; 
 }
 .media-title {
   font-size: 13px;
   text-align: center;
   color: #e1e1e1;
-  margin-bottom: 8px; /* Space below title */
-  width: 100%; /* Ensure title takes full width */
-  overflow: hidden; /* Prevent long titles from breaking layout */
-  text-overflow: ellipsis; /* Add ... for overflowed text */
-  white-space: nowrap; /* Keep title on one line */
+  width: 100%; 
+  overflow: hidden; 
+  text-overflow: ellipsis; 
+  white-space: nowrap; 
+  align-self: flex-end; 
+  margin-top: auto; 
+  padding-top: 4px; 
 }
 
-.global-media-item:hover {
-  border-color: #888;
-  cursor: pointer;
-}
 
 /* Visual indicator for Virtual Assets */
 .global-media-item.virtual-asset {
-    border-left: 5px solid #007bff; /* Distinctive blue left border */
-    /* You could also slightly change the background or add a small badge */
-    /* background-color: #30343d; */
+    border-left: 5px solid #007bff; /* Blue for virtual */
+    padding-left: 5px; 
 }
 
-/* Optional: Icon for virtual assets using Font Awesome */
 .global-media-item.virtual-asset .image-container::after {
-    content: "\f0c1"; /* Font Awesome 'link' icon (fa-link) */
-    /* Or use "\f24d" for fa-clone */
-    font-family: "Font Awesome 5 Free"; /* Ensure this matches your Font Awesome version */
-    font-weight: 900; /* For solid icons */
+    content: "\f0c1"; /* fa-link */
+    font-family: "Font Awesome 5 Free", "FontAwesome"; 
+    font-weight: 900; 
     position: absolute;
     bottom: 5px;
     right: 5px;
     font-size: 12px;
     color: #ffffff;
-    background-color: rgba(0, 123, 255, 0.75); /* Semi-transparent blue background */
+    background-color: rgba(0, 123, 255, 0.75); 
     padding: 3px 5px;
     border-radius: 3px;
     line-height: 1;
-    z-index: 1; /* Ensure it's above the image if image has its own z-index */
-    pointer-events: none; /* So it doesn't interfere with clicks on the item */
+    z-index: 1; 
+    pointer-events: none; 
+}
+
+/* Visual indicator for Variant Assets */
+.global-media-item.variant-asset {
+    border-left: 5px solid #dc3545; /* Red for variant */
+    padding-left: 5px; 
+}
+
+.global-media-item.variant-asset .image-container::after {
+    content: "\f247"; /* fa-clone or fa-copy (\f0c5) might be good */
+    /* Other options: \f064 (fa-share), \f126 (fa-code-branch), \f079 (fa-retweet) */
+    font-family: "Font Awesome 5 Free", "FontAwesome"; 
+    font-weight: 900; 
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    font-size: 12px;
+    color: #ffffff;
+    background-color: rgba(220, 53, 69, 0.75); /* Red background for variant icon */
+    padding: 3px 5px;
+    border-radius: 3px;
+    line-height: 1;
+    z-index: 1; 
+    pointer-events: none; 
 }
 
 
 /* Variant badge – if using transformation parameter indicator (already present) */
+/* This might be redundant if the above .variant-asset styling is sufficient */
 .variant-indicator {
   position: absolute;
   top: 8px;

@@ -1,14 +1,12 @@
 // js/mediaLibrary.js
-// Version 2.21 (Visual Indicator for Virtual Assets)
-var MediaLibrary = (function(){
+// Version 2.24 (Show Variants Functionality)
+var MediaLibrary = (function($){ 
 
-  // Helper function to generate CSS filter string (replicated from UIE for use here)
   const getCssFilterStringForLibrary = (filtersObject) => {
     const f = filtersObject || { brightness: 100, contrast: 100, saturation: 100, hue: 0 };
     return `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturation}%) hue-rotate(${f.hue}deg)`;
   };
 
-  // Helper function to generate a scaled thumbnail (replicated from UIE for use here)
   const generateScaledThumbnailForLibrary = (sourceCanvas, maxWidth = 150, maxHeight = 100) => {
     const srcW = sourceCanvas.width;
     const srcH = sourceCanvas.height;
@@ -17,13 +15,16 @@ var MediaLibrary = (function(){
         const emptyCanvas = document.createElement('canvas');
         emptyCanvas.width = maxWidth; emptyCanvas.height = maxHeight;
         const eCtx = emptyCanvas.getContext('2d');
-        eCtx.fillStyle = '#555'; eCtx.fillRect(0,0,maxWidth,maxHeight);
-        eCtx.fillStyle = '#fff'; eCtx.textAlign = 'center'; eCtx.font = '10px Arial';
+        eCtx.fillStyle = '#555'; 
+        eCtx.fillRect(0,0,maxWidth,maxHeight);
+        eCtx.fillStyle = '#fff';
+        eCtx.textAlign = 'center';
+        eCtx.font = '10px Arial';
         eCtx.fillText('No Preview', maxWidth/2, maxHeight/2);
         return emptyCanvas;
     }
 
-    const scale = Math.min(maxWidth / srcW, maxHeight / srcH, 1); // Do not scale up
+    const scale = Math.min(maxWidth / srcW, maxHeight / srcH, 1); 
     const thumbW = Math.round(srcW * scale);
     const thumbH = Math.round(srcH * scale);
 
@@ -37,12 +38,17 @@ var MediaLibrary = (function(){
     return thumbCanvas;
   };
 
-
-  function loadMedia(query = "") {
+  // Function to load media with search query, tag filter, and show_variants flag
+  function loadMedia(query = "", tagFilter = "", showVariants = false) {
+    $('#global-media').html('<p>Loading media...</p>'); 
     $.ajax({
       url: "ajax/getGlobalMedia.php", 
       type: "GET",
-      data: { q: query },
+      data: { 
+        q: query,
+        tag_filter: tagFilter,
+        show_variants: showVariants // New parameter
+      },
       dataType: "json",
       success: function(response) {
         let mediaData = response;
@@ -72,23 +78,34 @@ var MediaLibrary = (function(){
       mediaArray.forEach(function(mediaAsset) { 
         var $item = $("<div></div>")
                       .addClass("global-media-item") 
-                      .data("asset-data", mediaAsset); 
+                      .data("asset-data", mediaAsset); // Store the whole asset (master or variant)
 
-        // Determine if the asset is virtual
-        // A virtual asset has a physical_source_asset_id that is not null AND different from its own id.
-        const isVirtual = mediaAsset.physical_source_asset_id && 
-                          mediaAsset.physical_source_asset_id !== mediaAsset.id &&
-                          mediaAsset.physical_source_asset_id !== null;
+        const isVirtualMaster = mediaAsset.physical_source_asset_id &&
+                                mediaAsset.physical_source_asset_id !== mediaAsset.id &&
+                                mediaAsset.physical_source_asset_id !== null &&
+                                !mediaAsset.is_variant; // Ensure it's not a variant itself being misidentified
 
-        if (isVirtual) {
+        const isVariant = mediaAsset.is_variant === true || mediaAsset.is_variant === "true";
+
+
+        if (isVariant) {
+            $item.addClass("variant-asset");
+            // Title for variant: "Master Title > Variant Name"
+            // Assuming mediaAsset.master_admin_title and mediaAsset.variant_type are sent from PHP
+            let masterTitle = mediaAsset.master_admin_title || `Master ${mediaAsset.media_asset_id}`;
+            let variantTitle = mediaAsset.variant_type || `Variant ${mediaAsset.id}`;
+            $item.attr("title", `Variant of '${masterTitle}' (ID: ${mediaAsset.id}, Master ID: ${mediaAsset.media_asset_id})`);
+            displayTitle = `${masterTitle} > ${variantTitle}`;
+        } else if (isVirtualMaster) {
             $item.addClass("virtual-asset");
             $item.attr("title", "Virtual Asset (Source ID: " + mediaAsset.physical_source_asset_id + ")");
-        } else {
+            displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Virtual Master';
+        } else { // Physical Master
             $item.attr("title", "Physical Asset");
+            displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Physical Asset';
         }
                         
         var physicalImageUrl = mediaAsset.image_url || 'img/placeholder.png'; 
-        var displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Asset';
                         
         var $imgContainer = $("<div></div>").addClass("image-container");
         $imgContainer.html('<img src="img/loading.gif" alt="Loading..." style="width:30px; height:30px;">');
@@ -108,70 +125,107 @@ var MediaLibrary = (function(){
             return;
           }
           
-          var imageUrlForUIE = assetDataForEditor.image_url; 
+          // If it's a variant, we need to load its master asset data for the UIE
+          // but tell UIE which variant to potentially pre-select or focus on.
+          // For now, UIE always opens the master. The UIE itself handles variant selection.
+          // The key is to pass the correct master asset data to UIE.
           
-          console.log("Opening editor for asset ID:", assetDataForEditor.id, 
-                      "Physical URL for UIE:", imageUrlForUIE, 
-                      "Admin Title:", assetDataForEditor.admin_title || assetDataForEditor.title);
-          console.log("Full Asset Data for Editor:", assetDataForEditor);
+          let masterAssetDataToLoadInUIE = assetDataForEditor;
+          let physicalUrlForUIE = assetDataForEditor.image_url; // This should always be the physical path
+
+          if (assetDataForEditor.is_variant) {
+            // Construct a "master-like" object to open the UIE with the master's context.
+            // The actual master asset data (including its default_crop, filter_state, source_url, attribution)
+            // should ideally be part of the variant's data from getGlobalMedia.php or fetched separately.
+            // For simplicity now, we assume `assetDataForEditor` for a variant *contains* enough
+            // master info (like `master_physical_url`, `master_default_crop`, etc.)
+            // OR, we make another call to get the master asset if UIE strictly needs it.
+            // Let's assume getGlobalMedia.php now returns master's core details along with variant.
+            
+            masterAssetDataToLoadInUIE = {
+                id: assetDataForEditor.media_asset_id, // Master's ID
+                admin_title: assetDataForEditor.master_admin_title,
+                public_caption: assetDataForEditor.master_public_caption,
+                alt_text: assetDataForEditor.master_alt_text,
+                source_url: assetDataForEditor.master_source_url,
+                attribution: assetDataForEditor.master_attribution,
+                default_crop: assetDataForEditor.master_default_crop,
+                filter_state: assetDataForEditor.master_filter_state,
+                physical_source_asset_id: assetDataForEditor.master_physical_source_asset_id, // Master's physical source
+                image_url: assetDataForEditor.image_url // Physical image URL (same for master and variant)
+                // Add any other fields UIE expects for a master asset
+            };
+            console.log("Clicked a VARIANT. Opening its MASTER in UIE:", masterAssetDataToLoadInUIE);
+          } else {
+             console.log("Clicked a MASTER. Opening in UIE:", masterAssetDataToLoadInUIE);
+          }
           
-          if (imageUrlForUIE && assetDataForEditor.id) {
+          if (physicalUrlForUIE && masterAssetDataToLoadInUIE.id) {
             UnifiedImageEditor.openEditor(
-              imageUrlForUIE,     
-              assetDataForEditor,
+              physicalUrlForUIE,     
+              masterAssetDataToLoadInUIE, // Pass the (potentially reconstructed) master asset data
               function() { 
-                console.log("Asset or Variant saved/updated for asset ID:", assetDataForEditor.id, ". Refreshing media library view.");
-                MediaLibrary.loadMedia($(".media-search input").val() || ""); 
+                const currentQuery = $('#media-search-input').val();
+                const currentTagFilter = $('#media-tag-filter').val();
+                const currentShowVariants = $('#media-show-variants').is(':checked');
+                MediaLibrary.loadMedia(currentQuery, currentTagFilter, currentShowVariants); 
               },
               function() { 
-                console.log("Unified Image Editor was closed for asset ID:", assetDataForEditor.id);
+                console.log("Unified Image Editor was closed.");
               }
             );
           } else {
-            showNotification("Error: Missing physical image URL or Asset ID for this item.", "error");
+            showNotification("Error: Missing physical image URL or Master Asset ID for UIE.", "error");
           }
         });        
         $globalMedia.append($item);
 
         const physicalImg = new Image();
-        physicalImg.crossOrigin = "Anonymous";
+        physicalImg.crossOrigin = "Anonymous"; 
 
         physicalImg.onload = () => {
-            let defaultCropData = null;
-            let defaultFiltersData = null;
-            try {
-                if (mediaAsset.default_crop && mediaAsset.default_crop !== "null" && mediaAsset.default_crop.trim() !== "") {
-                    defaultCropData = JSON.parse(mediaAsset.default_crop);
+            let cropToUse = null;
+            let filtersToApply = null;
+
+            if (isVariant && mediaAsset.variant_details_parsed) {
+                // For variants, use their specific crop and filters
+                cropToUse = mediaAsset.variant_details_parsed.crop;
+                filtersToApply = mediaAsset.variant_details_parsed.filters;
+            } else {
+                // For masters (physical or virtual), use their default_crop and filter_state
+                try {
+                    if (mediaAsset.default_crop && mediaAsset.default_crop !== "null" && mediaAsset.default_crop.trim() !== "") {
+                        cropToUse = JSON.parse(mediaAsset.default_crop);
+                    }
+                    if (mediaAsset.filter_state && mediaAsset.filter_state !== "null" && mediaAsset.filter_state.trim() !== "") {
+                        filtersToApply = JSON.parse(mediaAsset.filter_state);
+                    }
+                } catch (e) {
+                    console.error("Error parsing default crop/filter for media library item:", mediaAsset.id, e);
                 }
-                if (mediaAsset.filter_state && mediaAsset.filter_state !== "null" && mediaAsset.filter_state.trim() !== "") {
-                    defaultFiltersData = JSON.parse(mediaAsset.filter_state);
-                }
-            } catch (e) {
-                console.error("Error parsing default crop/filter for media library item:", mediaAsset.id, e);
+            }
+            
+            // Fallback to full image if no valid crop defined
+            if (!cropToUse || cropToUse.width <= 0 || cropToUse.height <= 0) {
+                cropToUse = { x: 0, y: 0, width: physicalImg.naturalWidth, height: physicalImg.naturalHeight };
             }
 
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
 
-            const cropToUse = (defaultCropData && defaultCropData.width > 0 && defaultCropData.height > 0) ?
-                defaultCropData :
-                { x: 0, y: 0, width: physicalImg.naturalWidth, height: physicalImg.naturalHeight };
-
-            if (cropToUse.width <= 0 || cropToUse.height <= 0 || physicalImg.naturalWidth === 0 || physicalImg.naturalHeight === 0) {
-                 console.warn("Media library thumbnail: Invalid crop or image dimensions for asset", mediaAsset.id, cropToUse, "Img:", physicalImg.naturalWidth, "x", physicalImg.naturalHeight);
+            if (physicalImg.naturalWidth === 0 || physicalImg.naturalHeight === 0) {
+                 console.warn("Media library thumbnail: Physical image has zero dimensions for asset", mediaAsset.id);
                  const errorThumb = generateScaledThumbnailForLibrary(document.createElement('canvas'));
-                 const $imgElement = $("<img>")
-                    .attr("src", errorThumb.toDataURL())
-                    .attr("alt", mediaAsset.alt_text || displayTitle);
+                 const $imgElement = $("<img>").attr("src", errorThumb.toDataURL()).attr("alt", displayTitle);
                  $imgContainer.empty().append($imgElement);
                  return; 
             }
             
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
             tempCanvas.width = cropToUse.width;
             tempCanvas.height = cropToUse.height;
 
-            if (defaultFiltersData) {
-                tempCtx.filter = getCssFilterStringForLibrary(defaultFiltersData);
+            if (filtersToApply) {
+                tempCtx.filter = getCssFilterStringForLibrary(filtersToApply);
             }
             tempCtx.drawImage(physicalImg,
                 cropToUse.x, cropToUse.y, cropToUse.width, cropToUse.height,
@@ -179,43 +233,72 @@ var MediaLibrary = (function(){
             );
             
             const thumbCanvas = generateScaledThumbnailForLibrary(tempCanvas, 150, 100);
-
-            const $imgElement = $("<img>")
-                .attr("src", thumbCanvas.toDataURL())
-                .attr("alt", mediaAsset.alt_text || displayTitle);
+            const $imgElement = $("<img>").attr("src", thumbCanvas.toDataURL()).attr("alt", displayTitle);
             $imgContainer.empty().append($imgElement);
         };
 
         physicalImg.onerror = () => {
             console.error("Failed to load image for media library thumbnail:", physicalImageUrl);
-            const $imgElement = $("<img>")
-                .attr("src", 'img/placeholder.png') 
-                .attr("alt", "Error loading image");
+            const $imgElement = $("<img>").attr("src", 'img/placeholder.png').attr("alt", "Error loading image");
             $imgContainer.empty().append($imgElement);
         };
         physicalImg.src = physicalImageUrl;
 
       });
     } else if (Array.isArray(mediaArray) && mediaArray.length === 0) {
-      $globalMedia.html("<p>No media available.</p>");
+      $globalMedia.html("<p>No media found matching your criteria.</p>");
     } else {
       $globalMedia.html("<p>Received invalid media data format.</p>");
       console.error("Received invalid media data format:", mediaArray);
     }
   }
 
+  function loadTagFilters() {
+    $.ajax({
+        url: 'ajax/getAllTags.php', 
+        type: 'GET',
+        dataType: 'json',
+        success: function(tags) {
+            const $tagFilterSelect = $('#media-tag-filter');
+            $tagFilterSelect.empty().append('<option value="">All Tags</option>'); 
+            if (tags && tags.length > 0) {
+                tags.forEach(function(tag) {
+                    $tagFilterSelect.append(`<option value="${tag.id}">${tag.name}</option>`);
+                });
+            }
+        },
+        error: function(jqXHR, textStatus, errorThrown) {
+            console.error("Error loading tags for filter:", textStatus, errorThrown);
+            $('#media-tag-filter').empty().append('<option value="">Error loading tags</option>');
+        }
+    });
+  }
+
   function init(){
-    if ($("#global-media").prev(".media-search").length === 0) {
-      var $searchDiv = $("<div></div>").addClass("media-search");
-      var $input = $("<input type='text' placeholder='Search media...'>");
-      $input.on("input", debounce(function(){ 
-        var q = $(this).val();
-        loadMedia(q);
-      }, 300));
-      $searchDiv.append($input);
-      $("#global-media").before($searchDiv);
-    }
-    loadMedia(); 
+    $('#media-search-input').on("input", debounce(function(){ 
+        const query = $(this).val();
+        const tagFilter = $('#media-tag-filter').val();
+        const showVariants = $('#media-show-variants').is(':checked');
+        loadMedia(query, tagFilter, showVariants);
+    }, 300));
+
+    $('#media-tag-filter').on("change", function(){
+        const tagFilter = $(this).val();
+        const query = $('#media-search-input').val();
+        const showVariants = $('#media-show-variants').is(':checked');
+        loadMedia(query, tagFilter, showVariants);
+    });
+
+    // Event listener for the "Show Variants" checkbox
+    $('#media-show-variants').on("change", function(){
+        const showVariants = $(this).is(':checked');
+        const query = $('#media-search-input').val();
+        const tagFilter = $('#media-tag-filter').val();
+        loadMedia(query, tagFilter, showVariants);
+    });
+    
+    loadTagFilters();
+    loadMedia("", "", false); // Initial load: no query, no tag filter, don't show variants by default
   }
 
   function debounce(func, delay) {
@@ -239,6 +322,6 @@ var MediaLibrary = (function(){
 
   return {
     init: init,
-    loadMedia: loadMedia
+    loadMedia: loadMedia 
   };
-})();
+})(jQuery);

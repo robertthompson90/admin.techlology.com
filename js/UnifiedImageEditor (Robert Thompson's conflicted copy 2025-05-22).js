@@ -1,8 +1,8 @@
-// UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, crop fixes, variant caching, and source/attribution fields.
-// Version 2.22.4 (Source/Attribution Fields)
+// UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, and crop fixes.
+// Version 2.22.2 (Accurate Preset Previews)
 
 const UnifiedImageEditor = (() => {
-  'use strict';
+  'usestrict';
 
   let cropper = null;
   let initialZoomRatio = 1; 
@@ -11,17 +11,12 @@ const UnifiedImageEditor = (() => {
   // State variables for new controls
   let isAspectRatioLocked = false;
   let currentLockedAspectRatio = NaN;
-  
-  let uieCurrentMediaAssetIdForTags = null; // For TagSystem integration
+
   let currentMediaAssetId = null;
   let currentMediaAssetAdminTitle = ''; 
   let currentMasterPublicCaption = '';  
-  let currentMasterAltText = '';
-  // --- NEW: State for Source URL and Attribution ---
-  let currentMasterSourceUrl = '';
-  let currentMasterAttribution = '';
-  // --- END NEW ---
-  let currentMediaAssetUrl = '';      // This is ALWAYS the URL of the ultimate physical file
+  let currentMasterAltText = '';        
+  let currentMediaAssetUrl = '';      
   let currentPhysicalSourceAssetId = null; // Stores the ID of the ultimate physical source
   let isCurrentMasterPhysical = true;   // True if currentMediaAssetId refers to a physical asset
 
@@ -37,9 +32,6 @@ const UnifiedImageEditor = (() => {
 
   let onVariantSavedOrUpdatedCallback = null;
   let onEditorClosedCallback = null;
-
-  let cachedVariantsForCurrentMaster = [];
-  let variantsInitiallyLoadedForMaster = false;
 
   const showNotification = (message, type) => {
     if (typeof Notifications !== 'undefined' && Notifications.show) {
@@ -78,6 +70,7 @@ const UnifiedImageEditor = (() => {
     return `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturation}%) hue-rotate(${f.hue}deg)`;
   };
 
+
   const generateScaledThumbnail = (sourceCanvas, maxWidth = 80, maxHeight = 80) => {
     const srcW = sourceCanvas.width;
     const srcH = sourceCanvas.height;
@@ -91,7 +84,7 @@ const UnifiedImageEditor = (() => {
         eCtx.fillText('No Preview', maxWidth/2, maxHeight/2);
         return emptyCanvas;
     }
-    const scale = Math.min(maxWidth / srcW, maxHeight / srcH, 1);
+    const scale = Math.min(maxWidth / srcW, maxHeight / srcH, 1); // Ensure not to scale up
     const thumbW = Math.round(srcW * scale);
     const thumbH = Math.round(srcH * scale);
     const thumbCanvas = document.createElement('canvas');
@@ -107,7 +100,7 @@ const UnifiedImageEditor = (() => {
         if (!physicalImageElementForPreview || !physicalImageElementForPreview.naturalWidth) {
             console.warn("generateTransformedPreviewCanvas: Physical base image not ready.", physicalImageElementForPreview);
             const errorCanvas = document.createElement('canvas'); errorCanvas.width=1; errorCanvas.height=1;
-            return resolve(errorCanvas); 
+            return resolve(errorCanvas); // Resolve with a tiny canvas to prevent downstream errors
         }
 
         let stage1Canvas = document.createElement('canvas');
@@ -119,6 +112,7 @@ const UnifiedImageEditor = (() => {
         
         if (cropForStage1.width <= 0 || cropForStage1.height <= 0) {
             console.warn("generateTransformedPreviewCanvas: Master default crop has zero or negative dimensions.", cropForStage1);
+            // Fallback to full physical image if crop is invalid
             stage1Canvas.width = physicalImageElementForPreview.naturalWidth;
             stage1Canvas.height = physicalImageElementForPreview.naturalHeight;
             if (masterDefaultFilters) stage1Ctx.filter = getCssFilterString(masterDefaultFilters);
@@ -129,6 +123,7 @@ const UnifiedImageEditor = (() => {
             if (masterDefaultFilters) stage1Ctx.filter = getCssFilterString(masterDefaultFilters);
             stage1Ctx.drawImage(physicalImageElementForPreview, cropForStage1.x, cropForStage1.y, cropForStage1.width, cropForStage1.height, 0, 0, cropForStage1.width, cropForStage1.height);
         }
+
 
         if (!variantSpecificCrop && !variantSpecificFilters) {
             resolve(stage1Canvas);
@@ -144,8 +139,9 @@ const UnifiedImageEditor = (() => {
 
         if (cropForStage2.width <= 0 || cropForStage2.height <= 0) {
             console.warn("generateTransformedPreviewCanvas: Variant specific crop has zero or negative dimensions.", cropForStage2);
-            if (variantSpecificFilters) stage1Ctx.filter = getCssFilterString(variantSpecificFilters);
-            resolve(stage1Canvas);
+             // Fallback to stage1 canvas if variant crop is invalid
+            if (variantSpecificFilters) stage1Ctx.filter = getCssFilterString(variantSpecificFilters); // Apply filters to stage1
+            resolve(stage1Canvas); // Resolve with stage1 (potentially with variant filters)
             return;
         }
         
@@ -178,10 +174,13 @@ const UnifiedImageEditor = (() => {
             typeof defaultCrop.height === 'number' && defaultCrop.height > 0) {
             
             cropToUse = { ...defaultCrop }; 
+
             cropToUse.x = Math.max(0, Math.min(cropToUse.x, physicalImage.naturalWidth));
             cropToUse.y = Math.max(0, Math.min(cropToUse.y, physicalImage.naturalHeight));
+            
             cropToUse.width = Math.max(1, Math.min(cropToUse.width, physicalImage.naturalWidth - cropToUse.x));
             cropToUse.height = Math.max(1, Math.min(cropToUse.height, physicalImage.naturalHeight - cropToUse.y));
+
         } else {
             if (defaultCrop) { 
                  console.warn("Virtual master processing: defaultCrop was null, empty, or had invalid/zero dimensions. Using full physical image dimensions.", JSON.stringify(defaultCrop));
@@ -231,7 +230,7 @@ const UnifiedImageEditor = (() => {
     if (cropper && cropper.ready) {
         try {
             const cropData = cropper.getData(true); 
-            $('#uie-current-dims').text(`${Math.round(cropData.width)}px × ${Math.round(cropData.height)}px`);
+            $('#uie-current-dims').text(`${cropData.width}px × ${cropData.height}px`);
         } catch (e) {
             console.warn("Could not get crop data for dimensions display:", e);
             $('#uie-current-dims').text('Error');
@@ -252,8 +251,10 @@ const UnifiedImageEditor = (() => {
     }
   };
 
+
   const ensureOverlayExists = () => {
     if ($('#uie-overlay').length === 0) {
+      // Main container with new structure: uie-editor-body is now the main flex row container
       const editorHTML = `
         <div id="uie-overlay" class="uie-container hidden">
           <header class="uie-header">
@@ -261,15 +262,12 @@ const UnifiedImageEditor = (() => {
             <input type="text" class="uie-title-input" value="Image Title">
             <button class="uie-close-button">X</button>
           </header>
-          <div class="uie-editor-body">
-            <div class="uie-main-image-and-variants-column">
-              <div class="uie-left-column">
-                <div class="uie-image-editing">
+
+          <div class="uie-editor-body"> <div class="uie-main-image-and-variants-column"> <div class="uie-left-column"> <div class="uie-image-editing">
                   <img id="uie-image" src="" alt="Editable Image">
                 </div>
               </div>
-              <div class="uie-variant-strip">
-                <div class="uie-variant-source">
+              <div class="uie-variant-strip"> <div class="uie-variant-source">
                   <div class="uie-panel-header">Source</div>
                   <div class="uie-thumbnail uie-box" id="uie-source-thumbnail-box">
                      <div class="image-container"><img class="uie-box-img" src="" alt="Source Thumbnail"></div>
@@ -282,30 +280,21 @@ const UnifiedImageEditor = (() => {
                 </div>
               </div>
             </div>
-            <div class="uie-right-column">
-              <div class="uie-panel uie-metadata-panel">
-                <div class="uie-panel-header">Metadata (Public & Source)</div> 
+
+            <div class="uie-right-column"> <div class="uie-panel uie-metadata-panel">
+                <div class="uie-panel-header">Metadata (Public)</div> 
                 <div class="uie-panel-content">
-                  <label for="uie-caption-input" class="uie-metadata-label">Caption (Public):</label>
+                  <label for="uie-caption-input" class="uie-metadata-label">Caption:</label>
                   <textarea id="uie-caption-input" class="uie-caption" placeholder="Public caption for this image/variant..."></textarea>
-                  <label for="uie-alt-text-input" class="uie-metadata-label">Alt Text (Public):</label>
+                  <label for="uie-alt-text-input" class="uie-metadata-label">Alt Text:</label>
                   <input type="text" id="uie-alt-text-input" class="uie-alt-text" placeholder="Descriptive alt text...">
-                  
-                  <label for="uie-source-url-input" class="uie-metadata-label">Source URL (Master):</label>
-                  <input type="url" id="uie-source-url-input" class="uie-source-url" placeholder="e.g., https://example.com/image.jpg">
-                  <label for="uie-attribution-input" class="uie-metadata-label">Attribution (Master):</label>
-                  <input type="text" id="uie-attribution-input" class="uie-attribution" placeholder="e.g., Photo by Jane Doe on Unsplash">
-                  </div>
+                </div>
               </div>
-              <div class="uie-panel uie-tags-global-panel">
-                <div class="uie-panel-header">Tags (Global to Master)</div>
+              <div class="uie-panel uie-tags-panel">
+                <div class="uie-panel-header">Tags (Global)</div>
                 <div class="uie-panel-content">
-                  <div class="uie-tag-management-area">
-                    <label for="uie-tag-input-field" class="uie-metadata-label">Tags:</label>
-                    <input type="text" id="uie-tag-input-field" class="uie-tag-input" placeholder="Add tags (comma separated, or press Enter)">
-                    <div id="uie-selected-tags-container" style="margin-top: 10px; min-height: 22px;">
-                    </div>
-                  </div>
+                  <input type="text" class="uie-tag-input" placeholder="Add tag...">
+                  <div class="uie-tag-list"></div>
                 </div>
               </div>
               <div class="uie-panel uie-controls-presets-panel">
@@ -363,16 +352,16 @@ const UnifiedImageEditor = (() => {
       if (isEditingMaster) {
           $('.uie-save-master-details-button').show(); 
           $('.uie-save-as-variant-button').show();
-          if (isCurrentMasterPhysical) { 
+          if (isCurrentMasterPhysical) { // Only show "Save as New Image" if master is physical
             $saveNewImageBtn.show(); 
           }
           $('.uie-source-label').hide().empty(); 
           $('#uie-source-thumbnail-box').addClass('active-variant'); 
           $('.uie-variant-box').removeClass('active-variant'); 
-      } else { 
+      } else { // Editing a variant
           $('.uie-update-variant-button').show().text(`Update Variant Details`); 
           $('.uie-save-as-new-variant-button').show();
-          if (isCurrentMasterPhysical) { 
+          if (isCurrentMasterPhysical) { // Only show "Save as New Image" if variant's master is physical
             $saveNewImageBtn.show();
           }
           $('.uie-source-label').show().html(`${currentMediaAssetAdminTitle}&nbsp;&gt;&nbsp;`); 
@@ -384,7 +373,7 @@ const UnifiedImageEditor = (() => {
     if (!cropper || !cropper.ready) return;
     try {
         const currentImageData = cropper.getImageData(); 
-        if (!currentImageData || !effectiveCropperSourceDimensions.width || effectiveCropperSourceDimensions.width === 0 || initialZoomRatio === 0 ) return;
+        if (!currentImageData || !effectiveCropperSourceDimensions.width || effectiveCropperSourceDimensions.width === 0 || initialZoomRatio === 0 ) return; // Added check for initialZoomRatio
         const currentZoomOfBaseImage = currentImageData.width / effectiveCropperSourceDimensions.width;
         
         let sliderValue = ((currentZoomOfBaseImage / initialZoomRatio) - 1) * 100;
@@ -452,6 +441,7 @@ const UnifiedImageEditor = (() => {
 
         let baseCanvasForPreset;
         try {
+            // Get the canvas representing the current visual crop in the main editor
             baseCanvasForPreset = cropper.getCroppedCanvas();
             if (!baseCanvasForPreset || baseCanvasForPreset.width === 0 || baseCanvasForPreset.height === 0) {
                 return reject("generatePresetThumbnail: Could not get valid base cropped canvas from main cropper.");
@@ -460,6 +450,7 @@ const UnifiedImageEditor = (() => {
             return reject("generatePresetThumbnail: Error getting base cropped canvas: " + e.message);
         }
 
+        // Create a new canvas to apply current slider filters (if any) to the base crop
         const currentlyFilteredBaseCanvas = document.createElement('canvas');
         currentlyFilteredBaseCanvas.width = baseCanvasForPreset.width;
         currentlyFilteredBaseCanvas.height = baseCanvasForPreset.height;
@@ -468,6 +459,7 @@ const UnifiedImageEditor = (() => {
         const currentSliderFilters = getCurrentUserAdjustedFiltersObject();
         cfbcCtx.filter = getCssFilterString(currentSliderFilters);
         cfbcCtx.drawImage(baseCanvasForPreset, 0, 0);
+        // Now, 'currentlyFilteredBaseCanvas' is what the user sees in the crop box with current filters.
 
         let finalPreviewCanvas = document.createElement('canvas');
         let finalCtx = finalPreviewCanvas.getContext('2d');
@@ -481,10 +473,14 @@ const UnifiedImageEditor = (() => {
                     saturation: presetFilterDetails.saturation || 100,
                     hue: presetFilterDetails.hue || 0
                 };
+
                 finalPreviewCanvas.width = currentlyFilteredBaseCanvas.width;
                 finalPreviewCanvas.height = currentlyFilteredBaseCanvas.height;
+                
+                // Apply the PRESET's filters on top of the already (slider) filtered base
                 finalCtx.filter = getCssFilterString(presetFilterValues);
                 finalCtx.drawImage(currentlyFilteredBaseCanvas, 0, 0);
+
             } catch (err) {
                 console.error("Error processing filter preset details for '" + preset.name + "':", err, preset.preset_details);
                 return reject(err);
@@ -499,23 +495,28 @@ const UnifiedImageEditor = (() => {
                 const targetRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
                 if (isNaN(targetRatio) || targetRatio <= 0) return reject("Invalid aspect ratio in preset.");
 
+                // The source for the crop preset thumbnail is the 'currentlyFilteredBaseCanvas'
                 const sourceW = currentlyFilteredBaseCanvas.width;
                 const sourceH = currentlyFilteredBaseCanvas.height;
+                
                 let newCropW, newCropH, cropX, cropY;
 
-                if (sourceW / sourceH > targetRatio) {
+                if (sourceW / sourceH > targetRatio) { // Source is wider than target ratio
                     newCropH = sourceH;
                     newCropW = newCropH * targetRatio;
                     cropX = (sourceW - newCropW) / 2;
                     cropY = 0;
-                } else {
+                } else { // Source is taller or same ratio
                     newCropW = sourceW;
                     newCropH = newCropW / targetRatio;
                     cropX = 0;
                     cropY = (sourceH - newCropH) / 2;
                 }
+                
                 finalPreviewCanvas.width = Math.round(newCropW);
                 finalPreviewCanvas.height = Math.round(newCropH);
+                
+                // Draw the centered crop from the 'currentlyFilteredBaseCanvas'
                 finalCtx.drawImage(currentlyFilteredBaseCanvas, 
                                    cropX, cropY, newCropW, newCropH,
                                    0, 0, finalPreviewCanvas.width, finalPreviewCanvas.height);
@@ -527,10 +528,12 @@ const UnifiedImageEditor = (() => {
             return reject("Unknown preset type: " + preset.type);
         }
         
+        // Generate the small, scaled thumbnail from the 'finalPreviewCanvas'
         const thumbCanvas = generateScaledThumbnail(finalPreviewCanvas);
         resolve(thumbCanvas.toDataURL());
     });
 };
+
 
   const setupPresetSorting = () => {
     $('.uie-filter-presets .uie-presets-scroll, .uie-crop-presets .uie-presets-scroll').sortable({
@@ -558,7 +561,7 @@ const UnifiedImageEditor = (() => {
   debouncedUpdateThumbnails = debounce(() => {
     if (!cropper || !cropper.ready) return;
     updatePresetThumbnails();
-  }, 500); 
+  }, 500); // Increased debounce slightly for potentially more complex rendering
 
   const updatePresetThumbnails = () => {
     $('.uie-preset-box').each(function() {
@@ -568,6 +571,7 @@ const UnifiedImageEditor = (() => {
       if (!preset) {
         return;
       }
+
       generatePresetThumbnail(preset).then(function(dataUrl) {
         $box.find('.uie-box-img').attr('src', dataUrl);
       }).catch(function(err) {
@@ -609,15 +613,21 @@ const UnifiedImageEditor = (() => {
                     const newAspectRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
                     if (!isNaN(newAspectRatio) && newAspectRatio > 0) {
                         cropper.setAspectRatio(newAspectRatio);
+                        // Get current canvas data (which reflects zoom and pan of the source image within cropper)
                         const canvasData = cropper.getCanvasData();
+                        
                         let newCropBoxWidth, newCropBoxHeight;
+                        // Calculate new crop box dimensions based on the canvasData and target aspect ratio
                         if (canvasData.width / canvasData.height > newAspectRatio) {
+                           // Canvas is wider than target ratio, so height is limiting
                            newCropBoxHeight = canvasData.height;
                            newCropBoxWidth = newCropBoxHeight * newAspectRatio;
                         } else {
+                           // Canvas is taller or same ratio, so width is limiting
                            newCropBoxWidth = canvasData.width;
                            newCropBoxHeight = newCropBoxWidth / newAspectRatio;
                         }
+                        // Set the crop box to be centered within the current canvas view
                         cropper.setCropBoxData({
                             left: canvasData.left + (canvasData.width - newCropBoxWidth) / 2,
                             top: canvasData.top + (canvasData.height - newCropBoxHeight) / 2,
@@ -638,11 +648,9 @@ const UnifiedImageEditor = (() => {
     });
   };
 
-  const initializeCropperInstance = (imageSrcForCropper, initialSettings = null, options = {}) => {
-    const defaultOptions = { refreshVariants: false };
-    const mergedOptions = { ...defaultOptions, ...options };
-
+  const initializeCropperInstance = (imageSrcForCropper, initialSettings = null) => {
     const imageElementForCropperDOM = document.getElementById('uie-image');
+    
     effectiveCropperSource = imageSrcForCropper; 
 
     if (cropper) {
@@ -664,129 +672,124 @@ const UnifiedImageEditor = (() => {
             return;
         }
         
-        let cropperOptions = { 
-            viewMode: 1, movable: true, scalable: true, zoomable: true,
+        let cropperOptions = {
+            viewMode: 1, 
+            movable: true, scalable: true, zoomable: true,
             cropBoxResizable: true, responsive: true, guides: false,
-            zoomOnWheel: true, wheelZoomRatio: 0.1,
-            minCropBoxWidth: 10, minCropBoxHeight: 10,
+            zoomOnWheel: true,
+            wheelZoomRatio: 0.1,
+            minCropBoxWidth: 10,
+            minCropBoxHeight: 10,
             crop: function(event) {
-                if (event.detail.originalEvent) { 
+                // This 'crop' event fires frequently during user interaction (drag, resize).
+                // For performance, we debounce the thumbnail updates.
+                if (event.detail.originalEvent) { // Only update if it's a user action
                     debouncedUpdateThumbnails(); 
                     updateDisplayedDimensions(); 
                 }
+            },
+            ready: function() {
+                if (!cropper) {
+                    console.warn("Cropper instance became null during ready callback.");
+                    return;
+                }
+                console.log("Cropper ready. Effective source dimensions:", effectiveCropperSourceDimensions);
+                
+                const container = cropper.getContainerData();
+                const imageW = effectiveCropperSourceDimensions.width;
+                const imageH = effectiveCropperSourceDimensions.height;
+                let fitZoom = 1.0; 
+
+                if (imageW > 0 && imageH > 0 && container.width > 0 && container.height > 0) {
+                    fitZoom = Math.min(container.width / imageW, container.height / imageH);
+                }
+                
+                cropper.zoomTo(fitZoom); 
+                
+                const actualCanvasAfterInitialZoom = cropper.getCanvasData();
+                if (imageW > 0) { 
+                    initialZoomRatio = actualCanvasAfterInitialZoom.width / imageW;
+                } else {
+                    initialZoomRatio = fitZoom; 
+                }
+                console.log("Initial fitZoom commanded:", fitZoom, "Actual initialZoomRatio for slider baseline:", initialZoomRatio);
+
+                cropper.setCanvasData({
+                    left: (container.width - actualCanvasAfterInitialZoom.width) / 2,
+                    top: (container.height - actualCanvasAfterInitialZoom.height) / 2,
+                    width: actualCanvasAfterInitialZoom.width,
+                    height: actualCanvasAfterInitialZoom.height
+                });
+            
+                const filtersForUI = (initialSettings && initialSettings.filters) ? 
+                                     initialSettings.filters : 
+                                     { brightness: 100, contrast: 100, saturation: 100, hue: 0 };
+
+                $('.uie-slider[data-filter="brightness"]').val(filtersForUI.brightness);
+                $('.uie-slider[data-filter="contrast"]').val(filtersForUI.contrast);
+                $('.uie-slider[data-filter="saturation"]').val(filtersForUI.saturation);
+                $('.uie-slider[data-filter="hue"]').val(filtersForUI.hue);
+                
+                $('#uie-image, .cropper-view-box img').css("filter", getCssFilterString(filtersForUI));
+                
+                if (initialSettings && initialSettings.crop) {
+                    console.log("Applying variant's initial settings (crop & implied zoom/pan):", initialSettings.crop);
+                    cropper.setData(initialSettings.crop); 
+                } else {
+                    // For master/virtual master, define the initial crop DATA as full natural dimensions.
+                    console.log("Applying full natural crop DATA for master/virtual master using setData with effectiveCropperSourceDimensions:", effectiveCropperSourceDimensions);
+                    if (effectiveCropperSourceDimensions.width > 0 && effectiveCropperSourceDimensions.height > 0) {
+                        cropper.setData({
+                            x: 0,
+                            y: 0,
+                            width: effectiveCropperSourceDimensions.width,
+                            height: effectiveCropperSourceDimensions.height
+                        });
+                    } else {
+                        console.error("Ready: effectiveCropperSourceDimensions are invalid. Cannot set initial full crop data.");
+                    }
+                    // Then, ensure the VISUAL crop box matches the fitted canvas.
+                    const canvasForInitialCropBox = cropper.getCanvasData();
+                     if (canvasForInitialCropBox.width > 0 && canvasForInitialCropBox.height > 0) {
+                        cropper.setCropBoxData({
+                            left: canvasForInitialCropBox.left,
+                            top: canvasForInitialCropBox.top,
+                            width: canvasForInitialCropBox.width,
+                            height: canvasForInitialCropBox.height
+                        });
+                        console.log("Ready: Initial visual crop box set to canvas dimensions:", cropper.getCropBoxData());
+                    } else {
+                        console.error("Ready: Canvas for initial crop box has zero dimensions.");
+                    }
+                }
+                
+                const currentImageData = cropper.getImageData();
+                if (currentImageData.naturalWidth > 0 && initialZoomRatio > 0 ) { 
+                    const actualCurrentZoom = currentImageData.width / currentImageData.naturalWidth;
+                    let sliderVal = ((actualCurrentZoom / initialZoomRatio) - 1) * 100;
+                    
+                    const sliderMax = parseFloat($(".uie-slider[data-cropper='zoom']").attr("max"));
+                    if (sliderVal < -99) sliderVal = -99; 
+                    if (sliderVal > sliderMax) sliderVal = sliderMax;
+                    $('.uie-slider[data-cropper="zoom"]').val(sliderVal);
+                } else {
+                     $('.uie-slider[data-cropper="zoom"]').val(0);
+                }
+
+                isAspectRatioLocked = false;
+                currentLockedAspectRatio = NaN;
+                updateAspectRatioLockButton();
+                
+                updateDisplayedDimensions(); 
+                requestAnimationFrame(pollZoomSlider);
+                loadMediaPresets(); 
+                loadAndDisplayVariants(currentMediaAssetId);
+                bindPresetEvents();
+                updateActionButtons(); 
+                // Initial call to update thumbnails after everything is ready
+                updatePresetThumbnails(); 
             }
         };
-        
-        cropperOptions.ready = function() { 
-            if (!cropper) {
-                console.warn("Cropper instance became null during ready callback.");
-                return;
-            }
-            console.log("Cropper ready. Effective source dimensions:", effectiveCropperSourceDimensions);
-            
-            const container = cropper.getContainerData();
-            const imageW = effectiveCropperSourceDimensions.width;
-            const imageH = effectiveCropperSourceDimensions.height;
-            let fitZoom = 1.0; 
-
-            if (imageW > 0 && imageH > 0 && container.width > 0 && container.height > 0) {
-                fitZoom = Math.min(container.width / imageW, container.height / imageH);
-            }
-            
-            cropper.zoomTo(fitZoom); 
-            
-            const actualCanvasAfterInitialZoom = cropper.getCanvasData();
-            if (imageW > 0) { 
-                initialZoomRatio = actualCanvasAfterInitialZoom.width / imageW;
-            } else {
-                initialZoomRatio = fitZoom; 
-            }
-            console.log("Initial fitZoom commanded:", fitZoom, "Actual initialZoomRatio for slider baseline:", initialZoomRatio);
-
-            cropper.setCanvasData({
-                left: (container.width - actualCanvasAfterInitialZoom.width) / 2,
-                top: (container.height - actualCanvasAfterInitialZoom.height) / 2,
-                width: actualCanvasAfterInitialZoom.width,
-                height: actualCanvasAfterInitialZoom.height
-            });
-        
-            const filtersForUI = (initialSettings && initialSettings.filters) ? 
-                                 initialSettings.filters : 
-                                 { brightness: 100, contrast: 100, saturation: 100, hue: 0 };
-
-            $('.uie-slider[data-filter="brightness"]').val(filtersForUI.brightness);
-            $('.uie-slider[data-filter="contrast"]').val(filtersForUI.contrast);
-            $('.uie-slider[data-filter="saturation"]').val(filtersForUI.saturation);
-            $('.uie-slider[data-filter="hue"]').val(filtersForUI.hue);
-            
-            $('#uie-image, .cropper-view-box img').css("filter", getCssFilterString(filtersForUI));
-            
-            if (initialSettings && initialSettings.crop) {
-                console.log("Applying variant's initial settings (crop & implied zoom/pan):", initialSettings.crop);
-                cropper.setData(initialSettings.crop); 
-            } else {
-                console.log("Applying full natural crop DATA for master/virtual master using setData with effectiveCropperSourceDimensions:", effectiveCropperSourceDimensions);
-                if (effectiveCropperSourceDimensions.width > 0 && effectiveCropperSourceDimensions.height > 0) {
-                    cropper.setData({
-                        x: 0, y: 0,
-                        width: effectiveCropperSourceDimensions.width,
-                        height: effectiveCropperSourceDimensions.height
-                    });
-                } else {
-                    console.error("Ready: effectiveCropperSourceDimensions are invalid. Cannot set initial full crop data.");
-                }
-                const canvasForInitialCropBox = cropper.getCanvasData();
-                 if (canvasForInitialCropBox.width > 0 && canvasForInitialCropBox.height > 0) {
-                    cropper.setCropBoxData({
-                        left: canvasForInitialCropBox.left,
-                        top: canvasForInitialCropBox.top,
-                        width: canvasForInitialCropBox.width,
-                        height: canvasForInitialCropBox.height
-                    });
-                    console.log("Ready: Initial visual crop box set to canvas dimensions:", cropper.getCropBoxData());
-                } else {
-                    console.error("Ready: Canvas for initial crop box has zero dimensions.");
-                }
-            }
-            
-            const currentImageData = cropper.getImageData();
-            if (currentImageData.naturalWidth > 0 && initialZoomRatio > 0 ) { 
-                const actualCurrentZoom = currentImageData.width / currentImageData.naturalWidth;
-                let sliderVal = ((actualCurrentZoom / initialZoomRatio) - 1) * 100;
-                
-                const sliderMax = parseFloat($(".uie-slider[data-cropper='zoom']").attr("max"));
-                if (sliderVal < -99) sliderVal = -99; 
-                if (sliderVal > sliderMax) sliderVal = sliderMax;
-                $('.uie-slider[data-cropper="zoom"]').val(sliderVal);
-            } else {
-                 $('.uie-slider[data-cropper="zoom"]').val(0);
-            }
-
-            isAspectRatioLocked = false;
-            currentLockedAspectRatio = NaN;
-            updateAspectRatioLockButton();
-            
-            updateDisplayedDimensions(); 
-            requestAnimationFrame(pollZoomSlider);
-            loadMediaPresets(); 
-
-            if (mergedOptions.refreshVariants || !variantsInitiallyLoadedForMaster) {
-                loadAndDisplayVariants(currentMediaAssetId); 
-            } else {
-                if (!isEditingMaster && currentVariantId) {
-                    $('.uie-variant-box').removeClass('active-variant'); 
-                    $(`.uie-variant-box[data-variant-id="${currentVariantId}"]`).addClass('active-variant');
-                } else if (isEditingMaster) {
-                    $('.uie-variant-box').removeClass('active-variant');
-                    $('#uie-source-thumbnail-box').addClass('active-variant');
-                }
-                 console.log("Skipped refetching variants, using cache. Master ID:", currentMediaAssetId);
-            }
-            
-            bindPresetEvents(); 
-            updateActionButtons(); 
-            updatePresetThumbnails(); 
-        }; 
         
         const tempContainerEl = document.querySelector('.uie-left-column .uie-image-editing');
         if (tempContainerEl) {
@@ -796,7 +799,9 @@ const UnifiedImageEditor = (() => {
                 cropperOptions.minCanvasHeight = effectiveCropperSourceDimensions.height;
             }
         }
+
         cropper = new Cropper(imageElementForCropperDOM, cropperOptions);
+
     };
     tempImg.onerror = () => {
         console.error("Failed to load image for Cropper initialization:", imageSrcForCropper);
@@ -806,6 +811,7 @@ const UnifiedImageEditor = (() => {
     tempImg.src = imageSrcForCropper; 
   };
 
+
   const resetEditorToMasterState = async (applyAssetDefaults = true) => {
     currentVariantId = null;
     isEditingMaster = true;
@@ -813,13 +819,10 @@ const UnifiedImageEditor = (() => {
     $('.uie-title-input').val(currentMediaAssetAdminTitle); 
     $('.uie-caption').val(currentMasterPublicCaption); 
     $('.uie-alt-text').val(currentMasterAltText);   
-    // --- NEW: Reset Source URL and Attribution fields ---
-    $('#uie-source-url-input').val(currentMasterSourceUrl);
-    $('#uie-attribution-input').val(currentMasterAttribution);
-    // --- END NEW ---
 
+    // Update source thumbnail styling based on whether the master is virtual
     const $sourceThumbBox = $('#uie-source-thumbnail-box');
-    if (!isCurrentMasterPhysical) { 
+    if (!isCurrentMasterPhysical) { // isCurrentMasterPhysical is true if it's a physical master
       $sourceThumbBox.addClass('uie-source-is-virtual');
       $sourceThumbBox.attr('title', 'Virtual Master (Source ID: ' + currentPhysicalSourceAssetId + ')');
     } else {
@@ -833,7 +836,8 @@ const UnifiedImageEditor = (() => {
     }
 
     let imageSrcForCropperToUse;
-    if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) {
+
+    if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { // Check if it's a virtual master
         console.log("Resetting to Virtual Master state. Its defaults will be baked into the source for Cropper.");
         try {
             imageSrcForCropperToUse = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
@@ -849,78 +853,62 @@ const UnifiedImageEditor = (() => {
         effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
     }
     
-    initializeCropperInstance(imageSrcForCropperToUse, null, { refreshVariants: false }); 
+    // Pass null for initialSettings to ensure master's own defaults (if any, baked in above) or natural state is shown
+    initializeCropperInstance(imageSrcForCropperToUse, null); 
     
+    // Ensure active state is correct after reset
     $('#uie-source-thumbnail-box').addClass('active-variant');
     $('.uie-variant-box').removeClass('active-variant');
     updateActionButtons(); 
   };
 
+
   const openEditor = async (physicalImgUrl, assetDataObj, saveCb, closedCb) => {
     ensureOverlayExists();
-
-    cachedVariantsForCurrentMaster = [];
-    variantsInitiallyLoadedForMaster = false;
 
     currentMediaAssetId = assetDataObj.id;
     currentMediaAssetAdminTitle = assetDataObj.admin_title || assetDataObj.title || `Image ${assetDataObj.id}`; 
     currentMasterPublicCaption = assetDataObj.public_caption || assetDataObj.caption || '';
     currentMasterAltText = assetDataObj.alt_text || '';
-    // --- NEW: Populate Source URL and Attribution from assetDataObj ---
-    currentMasterSourceUrl = assetDataObj.source_url || ''; // Assuming 'source_url' will be in assetDataObj
-    currentMasterAttribution = assetDataObj.attribution || '';
-    // --- END NEW ---
 
+    // Determine if the asset being opened is itself a physical or virtual master
     isCurrentMasterPhysical = (!assetDataObj.physical_source_asset_id || 
                              assetDataObj.physical_source_asset_id === assetDataObj.id ||
                              assetDataObj.physical_source_asset_id === null); 
     
     console.log("Opening asset ID:", assetDataObj.id, "Is this asset physical?", isCurrentMasterPhysical, "Phys Src ID for this asset:", assetDataObj.physical_source_asset_id);
 
-    currentMediaAssetUrl = physicalImgUrl; 
+    currentMediaAssetUrl = physicalImgUrl; // This is ALWAYS the URL of the ultimate physical file
     currentPhysicalSourceAssetId = isCurrentMasterPhysical ? assetDataObj.id : assetDataObj.physical_source_asset_id;
+
 
     try {
         currentAssetDefaultCrop = (assetDataObj.default_crop && assetDataObj.default_crop !== "null" && assetDataObj.default_crop.trim() !== "") ? JSON.parse(assetDataObj.default_crop) : null;
         currentAssetDefaultFilters = (assetDataObj.filter_state && assetDataObj.filter_state !== "null" && assetDataObj.filter_state.trim() !== "") ? JSON.parse(assetDataObj.filter_state) : null;
     } catch (e) {
         console.error("Error parsing default crop/filter state for asset:", assetDataObj.id, e);
-        currentAssetDefaultCrop = null; currentAssetDefaultFilters = null;
+        currentAssetDefaultCrop = null;
+        currentAssetDefaultFilters = null;
     }
 
     onVariantSavedOrUpdatedCallback = saveCb;
     onEditorClosedCallback = closedCb;
+
     isEditingMaster = true; 
     currentVariantId = null;
-    uieCurrentMediaAssetIdForTags = assetDataObj.id;
-
-    if (uieCurrentMediaAssetIdForTags && typeof TagSystem !== 'undefined') {
-        TagSystem.init({
-            itemType: 'mediaAsset', itemId: uieCurrentMediaAssetIdForTags,
-            inputSelector: '#uie-tag-input-field', listSelector: '#uie-selected-tags-container',
-            getTagsUrl: 'ajax/gettags.php', addTagUrl: 'ajax/addtag.php',
-            removeTagUrl: 'ajax/removeTagFromItem.php', getItemTagsUrl: 'ajax/getItemTags.php',
-            addTagOnBlur: false 
-        });
-    } else {
-        console.warn("UIE: TagSystem not available or asset ID missing for tags init.");
-        if (typeof TagSystem !== 'undefined' && TagSystem.setItemContext) TagSystem.setItemContext(null, 'mediaAsset');
-    }
 
     $('#uie-source-thumbnail-box .uie-box-img').attr('src', '').attr('alt', 'Loading source preview...');
     $('#uie-source-thumbnail-box .uie-box-caption').text(currentMediaAssetAdminTitle); 
     $('.uie-variant-scroll').empty().html('<p>Loading image for variants...</p>');
+    
     $('.uie-title-input').val(currentMediaAssetAdminTitle); 
     $('.uie-caption').val(currentMasterPublicCaption);
     $('.uie-alt-text').val(currentMasterAltText);
-    // --- NEW: Set values for Source URL and Attribution inputs ---
-    $('#uie-source-url-input').val(currentMasterSourceUrl);
-    $('#uie-attribution-input').val(currentMasterAttribution);
-    // --- END NEW ---
 
 
     const imagePreloader = new Image();
     imagePreloader.crossOrigin = "Anonymous"; 
+
     imagePreloader.onload = async function() { 
         if (this.naturalWidth === 0 || this.naturalHeight === 0) {
             showNotification("Error: Preloaded physical image data is invalid (zero dimensions).", "error");
@@ -930,8 +918,9 @@ const UnifiedImageEditor = (() => {
         activeBaseImageElement = this; 
         console.log("Physical source image preloaded:", activeBaseImageElement.src, activeBaseImageElement.width, activeBaseImageElement.height);
 
+        // Apply styling to source thumbnail based on whether the loaded asset is virtual
         const $sourceThumbBox = $('#uie-source-thumbnail-box');
-        if (!isCurrentMasterPhysical) { 
+        if (!isCurrentMasterPhysical) { // If it's NOT physical, it's virtual
           $sourceThumbBox.addClass('uie-source-is-virtual');
           $sourceThumbBox.attr('title', 'Virtual Master (Physical Source ID: ' + currentPhysicalSourceAssetId + ')');
         } else {
@@ -940,6 +929,7 @@ const UnifiedImageEditor = (() => {
         }
 
         try {
+            // The preview for the master source thumbnail should reflect ITS OWN default_crop and filter_state
             const masterPreviewCanvas = await generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, null, null);
             const scaledThumbCanvas = generateScaledThumbnail(masterPreviewCanvas, 85, 70); 
             $('#uie-source-thumbnail-box .uie-box-img').attr('src', scaledThumbCanvas.toDataURL()).attr('alt', 'Source Thumbnail');
@@ -948,7 +938,10 @@ const UnifiedImageEditor = (() => {
             $('#uie-source-thumbnail-box .uie-box-img').attr('alt', 'Preview Error');
         }
 
+
         let imageSrcToLoadInCropper;
+        
+        // If the master asset being loaded is VIRTUAL and has its own defaults, bake them in for Cropper.
         if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
             console.log("Opening Virtual Master: Preparing processed canvas with its baked-in defaults.");
             try {
@@ -959,16 +952,18 @@ const UnifiedImageEditor = (() => {
                 imageSrcToLoadInCropper = currentMediaAssetUrl; 
                 effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
             }
-        } else { 
+        } else { // Physical Master (or a Virtual Master that has no specific defaults to bake, so it acts like its physical source initially)
             console.log("Opening Physical Master (or VM without defaults to bake).");
             imageSrcToLoadInCropper = currentMediaAssetUrl;
             effectiveCropperSourceDimensions = { width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight };
         }
         
         $('#uie-overlay').removeClass('hidden').fadeIn(300, () => {
-            initializeCropperInstance(imageSrcToLoadInCropper, null, { refreshVariants: true }); 
+            // Pass null for initialSettings because we are loading the master; its defaults (if any) are already baked into imageSrcToLoadInCropper if it was virtual.
+            initializeCropperInstance(imageSrcToLoadInCropper, null); 
         });
     };
+
     imagePreloader.onerror = function() {
         console.error("Failed to preload physical source image:", currentMediaAssetUrl);
         showNotification("Error: Could not load the main image. Editor cannot open.", "error");
@@ -976,8 +971,10 @@ const UnifiedImageEditor = (() => {
         $('#uie-source-thumbnail-box .uie-box-img').attr('alt', 'Load Error');
         if (typeof onEditorClosedCallback === 'function') onEditorClosedCallback();
     };
+
     imagePreloader.src = currentMediaAssetUrl; 
   };
+
 
   const closeEditor = () => {
     if (cropper) {
@@ -987,13 +984,7 @@ const UnifiedImageEditor = (() => {
     activeBaseImageElement = null;
     effectiveCropperSource = null;
     effectiveCropperSourceDimensions = { width: 0, height: 0 };
-    cachedVariantsForCurrentMaster = [];
-    variantsInitiallyLoadedForMaster = false;
     $('#uie-overlay').fadeOut(300, function() { $(this).addClass('hidden'); });
-    uieCurrentMediaAssetIdForTags = null;
-    if (typeof TagSystem !== 'undefined' && TagSystem.setItemContext) {
-      TagSystem.setItemContext(null, 'mediaAsset'); 
-    }
     if (typeof onEditorClosedCallback === 'function') { onEditorClosedCallback(); }
   };
 
@@ -1029,6 +1020,7 @@ const UnifiedImageEditor = (() => {
     return finalCanvas.toDataURL('image/png'); 
   };
 
+
   const updateVariantThumbnailInStrip = (variantId, variantDetails) => {
     const $variantBox = $(`.uie-variant-box[data-variant-id="${variantId}"]`);
     if ($variantBox.length && activeBaseImageElement && activeBaseImageElement.complete && activeBaseImageElement.naturalWidth > 0) {
@@ -1049,6 +1041,7 @@ const UnifiedImageEditor = (() => {
     }
   };
 
+
   const loadAndDisplayVariants = (mediaAssetIdToLoad) => {
     if (!mediaAssetIdToLoad) {
         $('.uie-variant-scroll').empty().append('<p>No image selected.</p>');
@@ -1068,12 +1061,8 @@ const UnifiedImageEditor = (() => {
       dataType: 'json',
       success: function(response) {
         $('.uie-variant-scroll').empty();
-        cachedVariantsForCurrentMaster = []; 
-
         if (response.success && response.variants && response.variants.length > 0) {
-          cachedVariantsForCurrentMaster = response.variants; 
-
-          cachedVariantsForCurrentMaster.forEach(variant => {
+          response.variants.forEach(variant => {
             let variantAdminTitle = variant.variant_type || `Variant ${variant.id}`; 
             let variantDetailsParsed;
             try {
@@ -1096,8 +1085,11 @@ const UnifiedImageEditor = (() => {
             $('.uie-variant-scroll').append($variantBox);
 
             generateTransformedPreviewCanvas(
-                activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, 
-                variantDetailsParsed.crop, variantDetailsParsed.filters    
+                activeBaseImageElement,         
+                currentAssetDefaultCrop,        
+                currentAssetDefaultFilters,     
+                variantDetailsParsed.crop,      
+                variantDetailsParsed.filters    
             )
             .then(previewCanvas => generateScaledThumbnail(previewCanvas, 85, 70)) 
             .then(scaledThumbCanvas => {
@@ -1115,16 +1107,15 @@ const UnifiedImageEditor = (() => {
           } else if (isEditingMaster) { 
             $('#uie-source-thumbnail-box').addClass('active-variant');
           }
+
         } else if (response.success) {
           $('.uie-variant-scroll').append('<p>No variants yet. Click "Save as Variant" to create one.</p>');
         } else {
           $('.uie-variant-scroll').append(`<p>Error loading variants: ${response.error || 'Unknown server error'}</p>`);
         }
-        variantsInitiallyLoadedForMaster = true; 
       },
       error: function(jqXHR, textStatus, errorThrown) {
         $('.uie-variant-scroll').empty().append('<p>AJAX error loading variants.</p>');
-        variantsInitiallyLoadedForMaster = true; 
       }
     });
   };
@@ -1133,7 +1124,8 @@ const UnifiedImageEditor = (() => {
     $('.uie-variant-scroll').off('click.variantBox').on('click.variantBox', '.uie-variant-box', async function() {
       const $this = $(this);
       
-      $('#uie-source-thumbnail-box').removeClass('active-variant uie-source-is-virtual');
+      $('#uie-source-thumbnail-box').removeClass('active-variant uie-source-is-virtual'); // Also remove virtual class from source if it was there
+      // Re-apply virtual styling to source if the master IS virtual, even when a variant is selected
       if (!isCurrentMasterPhysical) {
           $('#uie-source-thumbnail-box').addClass('uie-source-is-virtual');
       }
@@ -1143,66 +1135,50 @@ const UnifiedImageEditor = (() => {
 
       currentVariantId = $this.data('variant-id');
       isEditingMaster = false; 
-      
-      const selectedVariantData = cachedVariantsForCurrentMaster.find(v => String(v.id) === String(currentVariantId));
+      const variantDetailsString = $this.data('variant-details');
+      const variantAdminTitle = $this.data('variant-title') || $this.find('.uie-variant-caption').text(); 
 
-      if (!selectedVariantData) {
-          showNotification("Error: Could not find selected variant data in cache.", "error");
-          const variantDetailsString = $this.data('variant-details'); // Fallback
-          const variantAdminTitleFallback = $this.data('variant-title') || $this.find('.uie-variant-caption').text();
-          try {
-              const detailsToParse = typeof variantDetailsString === 'string' ? variantDetailsString : JSON.stringify(variantDetailsString);
-              const fallbackDetails = JSON.parse(detailsToParse.replace(/&apos;/g, "'"));
-              console.warn("Using fallback details from data-attribute for variant:", currentVariantId);
-              // TODO: Consider if you need to re-assign variantDetails and variantAdminTitle here
-          } catch (e) {
-              console.error("Completely failed to get variant details for ID:", currentVariantId);
-              return;
-          }
-      }
 
-      const variantAdminTitle = selectedVariantData.variant_type || `Variant ${selectedVariantData.id}`;
-      let variantDetails;
       try {
-          variantDetails = typeof selectedVariantData.variant_details === 'string' ? 
-                           JSON.parse(selectedVariantData.variant_details.replace(/&apos;/g, "'")) : 
-                           selectedVariantData.variant_details;
-      } catch (e) {
-          console.error("Error parsing variant details from cache for variant ID:", selectedVariantData.id, e, "Raw data:", selectedVariantData.variant_details);
-          showNotification("Error loading variant details. Check console.", "error");
-          return;
-      }
+        const detailsToParse = typeof variantDetailsString === 'string' ? variantDetailsString : JSON.stringify(variantDetailsString);
+        const variantDetails = JSON.parse(detailsToParse.replace(/&apos;/g, "'"));
 
-      if (!activeBaseImageElement || !activeBaseImageElement.complete || activeBaseImageElement.naturalWidth === 0) {
-          showNotification("Base physical image not ready to apply variant.", "error");
-          return;
-      }
+        if (!activeBaseImageElement || !activeBaseImageElement.complete || activeBaseImageElement.naturalWidth === 0) {
+            showNotification("Base physical image not ready to apply variant.", "error");
+            return;
+        }
         
-      let masterImageSrcForCropper;
-      if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
-          console.log("Variant's master is a Virtual Master. Processing master's defaults for Cropper base.");
-          masterImageSrcForCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
-      } else { 
-          console.log("Variant's master is Physical (or VM without defaults). Using direct physical URL for Cropper base.");
-          masterImageSrcForCropper = currentMediaAssetUrl;
-          if(!effectiveCropperSourceDimensions.width && activeBaseImageElement) { 
-              effectiveCropperSourceDimensions = {width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight};
-          }
+        let masterImageSrcForCropper;
+        // When loading a variant, the Cropper base is ALWAYS derived from the master's state.
+        // If master is virtual, its defaults are baked in. If physical, it's the raw physical.
+        if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) { 
+            console.log("Variant's master is a Virtual Master. Processing master's defaults for Cropper base.");
+            masterImageSrcForCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
+        } else { 
+            console.log("Variant's master is Physical (or VM without defaults). Using direct physical URL for Cropper base.");
+            masterImageSrcForCropper = currentMediaAssetUrl;
+            if(!effectiveCropperSourceDimensions.width && activeBaseImageElement) { 
+                effectiveCropperSourceDimensions = {width: activeBaseImageElement.naturalWidth, height: activeBaseImageElement.naturalHeight};
+            }
+        }
+        
+        $('.uie-title-input').val(variantAdminTitle); 
+        $('.uie-caption').val(variantDetails.caption || ''); 
+        $('.uie-alt-text').val(variantDetails.altText || ''); 
+        updateActionButtons(); 
+        
+        // Initialize cropper with the (potentially processed) master image,
+        // then apply the variant's specific crop and filters.
+        initializeCropperInstance(masterImageSrcForCropper, {
+            crop: variantDetails.crop, 
+            filters: variantDetails.filters 
+        });
+        showNotification(`Variant ${currentVariantId} loaded.`, "info");
+
+      } catch (e) {
+        console.error("Error applying variant details:", e, "Raw data:", variantDetailsString);
+        showNotification("Error loading variant details. Check console.", "error");
       }
-      
-      $('.uie-title-input').val(variantAdminTitle); 
-      $('.uie-caption').val(variantDetails.caption || ''); 
-      $('.uie-alt-text').val(variantDetails.altText || ''); 
-      // --- NEW: Source/Attribution fields should NOT change when a variant is clicked. They belong to the master. ---
-      // So, no need to update #uie-source-url-input or #uie-attribution-input here.
-      // --- END NEW ---
-      updateActionButtons(); 
-      
-      initializeCropperInstance(masterImageSrcForCropper, {
-          crop: variantDetails.crop, 
-          filters: variantDetails.filters 
-      }, { refreshVariants: false }); 
-      showNotification(`Variant ${currentVariantId} loaded.`, "info");
     });
   };
 
@@ -1240,20 +1216,51 @@ const UnifiedImageEditor = (() => {
             case "crop": 
             case "cropzoom": 
                 if (cropper && cropper.ready) {
-                    console.log("--- CROP/ZOOM RESET START ---");
+                    console.log("--- CROP/ZOOM RESET (v2.22.3_reset_final_logic) START ---");
+                    console.log("Before any action - InitialZoomRatio:", initialZoomRatio);
+                    console.log("Before any action - EffectiveCropperSourceDimensions:", effectiveCropperSourceDimensions);
+                    console.log("Before any action - Canvas Data:", cropper.getCanvasData());
+                    console.log("Before any action - Crop Box Data (visual):", cropper.getCropBoxData());
+                    console.log("Before any action - Crop Data (image relative):", cropper.getData(true));
+
+                    // 1. Reset cropper. This primarily resets the image view (zoom/pan) to its initial state.
+                    //    The crop box data might be set to something unexpected by cropper.reset() itself.
                     cropper.reset();
+                    console.log("After cropper.reset() - Canvas Data:", cropper.getCanvasData());
+                    console.log("After cropper.reset() - Crop Data (image relative):", cropper.getData(true));
+
+                    // 2. Force the CROP DATA to the full natural dimensions of the *effective source image*.
+                    //    This ensures the underlying data represents the entire image.
                     if (effectiveCropperSourceDimensions.width > 0 && effectiveCropperSourceDimensions.height > 0) {
                         cropper.setData({
-                            x: 0, y: 0,
+                            x: 0,
+                            y: 0,
                             width: effectiveCropperSourceDimensions.width,
                             height: effectiveCropperSourceDimensions.height,
-                            rotate: 0, scaleX: 1, scaleY: 1
+                            rotate: 0, 
+                            scaleX: 1,
+                            scaleY: 1
                         });
+                        console.log("After forcing setData (to full natural) - Crop Data (image relative):", cropper.getData(true));
+                    } else {
+                        console.error("Reset: effectiveCropperSourceDimensions are invalid. Cannot reliably set full crop data.");
                     }
+                    
+                    // 3. Explicitly re-apply the initial fit zoom to the image view.
                     if (initialZoomRatio > 0 && initialZoomRatio !== Infinity ) {
                         cropper.zoomTo(initialZoomRatio);
-                    } else { /* ... fallback zoom ... */ }
+                    } else {
+                        const container = cropper.getContainerData();
+                        const imgData = cropper.getImageData();
+                        let fitZoom = 1.0;
+                        if (imgData.naturalWidth > 0 && imgData.naturalHeight > 0 && container.width > 0 && container.height > 0) {
+                            fitZoom = Math.min(container.width / imgData.naturalWidth, container.height / imgData.naturalHeight);
+                        }
+                        cropper.zoomTo(fitZoom);
+                        console.warn("Crop Reset: initialZoomRatio was invalid during reset, re-calculated & applied fitZoom:", fitZoom);
+                    }
                     
+                    // 4. Re-center the image canvas after applying the fit zoom.
                     const container = cropper.getContainerData(); 
                     const canvasDataAfterZoom = cropper.getCanvasData();
                     cropper.setCanvasData({
@@ -1262,23 +1269,38 @@ const UnifiedImageEditor = (() => {
                         width: canvasDataAfterZoom.width,
                         height: canvasDataAfterZoom.height
                     });
+                    console.log("After re-zoom & center - Canvas Data:", cropper.getCanvasData());
+
+                    // 5. CRITICAL: Set the VISUAL crop box to match the dimensions and position of the
+                    //    currently rendered (and now correctly zoomed/centered) canvas.
+                    //    This uses a setTimeout to allow Cropper.js to potentially finish internal rendering
+                    //    from the previous operations before we make this final visual adjustment.
                     setTimeout(() => {
-                        if (!cropper || !cropper.ready) return;
+                        if (!cropper || !cropper.ready) return; // Check if cropper still exists
                         const finalCanvasDataForCropBox = cropper.getCanvasData(); 
                         if (finalCanvasDataForCropBox.width > 0 && finalCanvasDataForCropBox.height > 0) {
+                            console.log("Reset (in timeout): Setting crop box to final canvas dimensions:", finalCanvasDataForCropBox);
                             cropper.setCropBoxData({
                                 left: finalCanvasDataForCropBox.left,
                                 top: finalCanvasDataForCropBox.top,
                                 width: finalCanvasDataForCropBox.width,
                                 height: finalCanvasDataForCropBox.height
                             });
+                            console.log("After setCropBoxData (in timeout) - Visual Crop Box:", cropper.getCropBoxData());
+                            console.log("After setCropBoxData (in timeout) - Crop Data (image relative):", cropper.getData(true));
+                        } else {
+                            console.error("Reset (in timeout): Final canvas data has zero width or height.");
                         }
-                        updateDisplayedDimensions();
-                    }, 10); 
+                        updateDisplayedDimensions(); // Update dimensions after this final adjustment
+                    }, 10); // Small delay, can be adjusted or tested with 0.
+
+                    // 6. Update UI elements (aspect ratio, zoom slider)
                     $('.uie-slider[data-cropper="zoom"]').val(0); 
-                    isAspectRatioLocked = false; currentLockedAspectRatio = NaN;
+                    isAspectRatioLocked = false;
+                    currentLockedAspectRatio = NaN;
                     updateAspectRatioLockButton();
                     if(cropper.ready) cropper.setAspectRatio(NaN); 
+
                     if (resetTarget === "crop") { 
                         $('.uie-slider[data-filter="brightness"]').val(100).trigger('input').trigger('change');
                         $('.uie-slider[data-filter="contrast"]').val(100).trigger('input').trigger('change');
@@ -1288,11 +1310,21 @@ const UnifiedImageEditor = (() => {
                     } else {
                         showNotification("Crop & Zoom reset.", "info");
                     }
-                    console.log("--- CROP/ZOOM RESET END ---");
+                    // updateDisplayedDimensions(); // Moved into the setTimeout
+                    console.log("--- CROP/ZOOM RESET END (sync part) ---");
                 }
                 break;
             case "position":
-                 if (cropper && cropper.ready) { /* ... center logic ... */ }
+                 if (cropper && cropper.ready) {
+                    const cd = cropper.getContainerData();
+                    const id = cropper.getImageData(); 
+                    if(cd && id && id.width && id.height) {
+                        cropper.setCanvasData({
+                            left: (cd.width - id.width) / 2,
+                            top: (cd.height - id.height) / 2
+                        });
+                    }
+                }
                 break;
             case "filters": 
                 $('.uie-slider[data-filter="brightness"]').val(100).trigger('input').trigger('change');
@@ -1304,65 +1336,131 @@ const UnifiedImageEditor = (() => {
         }
     });
 
-    $(document).off('click.uieAspectLock').on('click.uieAspectLock', '.uie-aspect-lock-btn', function() { /* ... existing aspect lock logic ... */ });
-    $('.uie-slider[data-filter]').off('input.filter change.filter').on('input.filter', function() { /* ... existing filter slider logic ... */ })
-                                 .on('change.filter', function() { debouncedUpdateThumbnails(); });
-    $('.uie-slider[data-cropper="zoom"]').off('input.zoom change.zoom').on('input.zoom', function() { /* ... existing zoom slider logic ... */ })
-                                     .on('change.zoom', function() { debouncedUpdateThumbnails(); });
+    $(document).off('click.uieAspectLock').on('click.uieAspectLock', '.uie-aspect-lock-btn', function() {
+        if (!cropper || !cropper.ready) return;
+        isAspectRatioLocked = !isAspectRatioLocked;
+        if (isAspectRatioLocked) {
+            const cropBoxData = cropper.getCropBoxData();
+            if (cropBoxData.width > 0 && cropBoxData.height > 0) {
+                currentLockedAspectRatio = cropBoxData.width / cropBoxData.height;
+                cropper.setAspectRatio(currentLockedAspectRatio);
+            } else { 
+                const imgData = cropper.getImageData();
+                currentLockedAspectRatio = imgData.naturalWidth / imgData.naturalHeight;
+                cropper.setAspectRatio(currentLockedAspectRatio);
+            }
+        } else {
+            currentLockedAspectRatio = NaN;
+            cropper.setAspectRatio(NaN);
+        }
+        updateAspectRatioLockButton();
+    });
 
-    // --- Save/Update Button Event Handlers ---
+
+    $('.uie-slider[data-filter]').off('input.filter').on('input.filter', function() {
+      if (cropper && cropper.ready) {
+          $('#uie-image, .cropper-view-box img').css("filter", getCssFilterString(getCurrentUserAdjustedFiltersObject()));
+      }
+    }).off('change.filter').on('change.filter', function() {
+      // This 'change' event fires when the user releases the mouse from the slider.
+      // This is a good time to update the more expensive preset thumbnails.
+      debouncedUpdateThumbnails();
+    });
+
+    $('.uie-slider[data-cropper="zoom"]').off('input.zoom').on('input.zoom', function() {
+      if (cropper && cropper.ready && initialZoomRatio !== 0) { 
+        let sliderValue = parseFloat($(this).val()); 
+        let newAbsoluteZoomLevel = ((sliderValue / 100) + 1) * initialZoomRatio;
+        if (newAbsoluteZoomLevel > 0) { // Ensure zoom level is positive
+             cropper.zoomTo(newAbsoluteZoomLevel);
+        }
+      } else if (cropper && cropper.ready && initialZoomRatio === 0 ) { // Handle case where initialZoomRatio might be 0
+        let sliderValue = parseFloat($(this).val());
+        // If initialZoomRatio was 0 (e.g. zero dim image), base new zoom on a small default instead
+        let newAbsoluteZoomLevel = ((sliderValue / 100) + 1) * 0.1; // Using 0.1 as a fallback base zoom
+         if (newAbsoluteZoomLevel > 0) {
+            cropper.zoomTo(newAbsoluteZoomLevel);
+        }
+      }
+    }).off('change.zoom').on('change.zoom', function() {
+        // Also update thumbnails on zoom change (release)
+        debouncedUpdateThumbnails();
+    });
+
     $(document).off('click.uieSaveMasterDetails').on('click.uieSaveMasterDetails', '.uie-save-master-details-button', function() {
-        if (!isEditingMaster || !currentMediaAssetId) return;
+        if (!isEditingMaster || !currentMediaAssetId) {
+            showNotification("No source image loaded or not in master edit mode.", "warning");
+            return;
+        }
         const newAdminTitle = $('.uie-title-input').val();
         const newPublicCaption = $('.uie-caption').val(); 
         const newAltText = $('.uie-alt-text').val();     
-        // --- NEW: Get Source URL and Attribution values ---
-        const newSourceUrl = $('#uie-source-url-input').val();
-        const newAttribution = $('#uie-attribution-input').val();
-        // --- END NEW ---
 
         $.ajax({
-            url: 'ajax/updateMediaAssetDetails.php', type: 'POST',
+            url: 'ajax/updateMediaAssetDetails.php',
+            type: 'POST',
             data: {
-                media_asset_id: currentMediaAssetId, admin_title: newAdminTitle, 
-                title: newAdminTitle, public_caption: newPublicCaption, alt_text: newAltText,
-                // --- NEW: Send Source URL and Attribution ---
-                source_url: newSourceUrl,
-                attribution: newAttribution
-                // --- END NEW ---
+                media_asset_id: currentMediaAssetId,
+                admin_title: newAdminTitle, 
+                title: newAdminTitle, 
+                public_caption: newPublicCaption, 
+                alt_text: newAltText             
             },
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    showNotification('Master asset details updated!', 'success');
+                    showNotification('Master asset details updated successfully!', 'success');
                     currentMediaAssetAdminTitle = newAdminTitle; 
                     currentMasterPublicCaption = newPublicCaption; 
                     currentMasterAltText = newAltText;         
-                    // --- NEW: Update state variables ---
-                    currentMasterSourceUrl = newSourceUrl;
-                    currentMasterAttribution = newAttribution;
-                    // --- END NEW ---
                     $('#uie-source-thumbnail-box .uie-box-caption').text(currentMediaAssetAdminTitle);
+                    
                     if ($('.uie-source-label').is(':visible') && !isEditingMaster) { 
                         $('.uie-source-label').html(`${currentMediaAssetAdminTitle}&nbsp;&gt;&nbsp;`);
                     }
-                    if (typeof onVariantSavedOrUpdatedCallback === 'function') onVariantSavedOrUpdatedCallback(); 
-                } else { showNotification('Error updating master: ' + (response.error || 'Failed.'), 'error'); }
-            }, error: (jqXHR, ts) => showNotification('AJAX Error updating master: ' + ts, 'error')
+                    if (typeof onVariantSavedOrUpdatedCallback === 'function') { 
+                        onVariantSavedOrUpdatedCallback(); 
+                    }
+                } else {
+                    showNotification('Error updating master asset details: ' + (response.error || 'Operation failed.'), 'error');
+                }
+            },
+            error: function(jqXHR, ts, et) {
+                showNotification('AJAX Error updating master asset details: ' + ts, 'error');
+            }
         });
     });
 
+
     $(document).off('click.uieSaveAsVariant').on('click.uieSaveAsVariant', '.uie-save-as-variant-button', function() {
-        if (!isEditingMaster || !cropper || !cropper.ready || !currentMediaAssetId) return;
-        const cropData = cropper.getData(true); 
-        const filters = getCurrentUserAdjustedFiltersObject(); 
-        const caption = $('.uie-caption').val(); 
-        const altText = $('.uie-alt-text').val();   
-        const details = JSON.stringify({ crop, filters, caption, altText });
-        const title = ($('.uie-title-input').val() || currentMediaAssetAdminTitle || "Image") + " - Variant"; 
+        if (!isEditingMaster) {
+            showNotification("Please select the Source image to create a new variant from it.", "info");
+            return;
+        }
+        if (!cropper || !cropper.ready || !currentMediaAssetId) {
+            showNotification("Cannot save: Editor not ready or no master image loaded.", "error"); return;
+        }
+
+        const cropDataForVariant = cropper.getData(true); 
+        const userFiltersForVariant = getCurrentUserAdjustedFiltersObject(); 
+        const variantPublicCaption = $('.uie-caption').val(); 
+        const variantAltText = $('.uie-alt-text').val();   
+
+        const variantDetails = JSON.stringify({ 
+            crop: cropDataForVariant, 
+            filters: userFiltersForVariant,
+            caption: variantPublicCaption,
+            altText: variantAltText
+        });
+        const variantAdminTitle = ($('.uie-title-input').val() || currentMediaAssetAdminTitle || "Image") + " - Variant"; 
+
         $.ajax({
             url: 'ajax/saveMediaVariant.php', type: 'POST',
-            data: { media_asset_id: currentMediaAssetId, variant_type: title, variant_details: details },
+            data: {
+                media_asset_id: currentMediaAssetId, 
+                variant_type: variantAdminTitle, 
+                variant_details: variantDetails
+            },
             dataType: 'json',
             success: function(response) {
               if (response.success && response.variant_id) {
@@ -1370,121 +1468,159 @@ const UnifiedImageEditor = (() => {
                 loadAndDisplayVariants(currentMediaAssetId); 
                 currentVariantId = response.variant_id;
                 isEditingMaster = false;
-                $('.uie-title-input').val(title); 
-                $('.uie-caption').val(caption); 
-                $('.uie-alt-text').val(altText);     
+                $('.uie-title-input').val(variantAdminTitle); 
+                $('.uie-caption').val(variantPublicCaption); 
+                $('.uie-alt-text').val(variantAltText);     
                 updateActionButtons();
                 if (typeof onVariantSavedOrUpdatedCallback === 'function') onVariantSavedOrUpdatedCallback();
               } else { showNotification('Error: ' + (response.error || 'Could not save new variant.'), 'error'); }
-            }, error: (jqXHR, ts) => showNotification('AJAX Error saving new variant: ' + ts, 'error')
+            },
+            error: function(jqXHR, ts, et) { showNotification('AJAX Error saving new variant: ' + ts, 'error'); }
         });
     });
 
     $(document).off('click.uieUpdateVariant').on('click.uieUpdateVariant', '.uie-update-variant-button', function() {
-        if (isEditingMaster || !currentVariantId || !cropper || !cropper.ready || !currentMediaAssetId) return;
-        const cropData = cropper.getData(true); 
-        const filters = getCurrentUserAdjustedFiltersObject(); 
-        const title = $('.uie-title-input').val(); 
-        const caption = $('.uie-caption').val();
-        const altText = $('.uie-alt-text').val();
-        const details = JSON.stringify({ crop: cropData, filters, caption, altText });
+        if (isEditingMaster || !currentVariantId) {
+             showNotification("No variant selected to update.", "info");
+             return;
+        }
+        if (!cropper || !cropper.ready || !currentMediaAssetId) {
+            showNotification("Cannot update: Editor not ready or no master image loaded.", "error"); return;
+        }
+        const cropDataForVariant = cropper.getData(true); 
+        const userFiltersForVariant = getCurrentUserAdjustedFiltersObject(); 
+        const newVariantAdminTitle = $('.uie-title-input').val(); 
+        const newVariantPublicCaption = $('.uie-caption').val();
+        const newVariantAltText = $('.uie-alt-text').val();
+
+        const variantDetails = JSON.stringify({ 
+            crop: cropDataForVariant, 
+            filters: userFiltersForVariant,
+            caption: newVariantPublicCaption,
+            altText: newVariantAltText
+        });
+
         $.ajax({
             url: 'ajax/updateMediaVariant.php', type: 'POST',
             data: {
-                variant_id: currentVariantId, media_asset_id: currentMediaAssetId, 
-                variant_type: title, variant_details: details
+                variant_id: currentVariantId,
+                media_asset_id: currentMediaAssetId, 
+                variant_type: newVariantAdminTitle, 
+                variant_details: variantDetails
             },
             dataType: 'json',
             success: function(response) {
               if (response.success) {
                 showNotification(`Variant ${currentVariantId} updated!`, 'success');
-                const variantIndex = cachedVariantsForCurrentMaster.findIndex(v => String(v.id) === String(currentVariantId));
-                if (variantIndex > -1) {
-                    cachedVariantsForCurrentMaster[variantIndex].variant_type = title;
-                    cachedVariantsForCurrentMaster[variantIndex].variant_details = details; 
-                }
-                updateVariantThumbnailInStrip(currentVariantId, { crop: cropData, filters });
+                updateVariantThumbnailInStrip(currentVariantId, {
+                    crop: cropDataForVariant, 
+                    filters: userFiltersForVariant
+                });
                 const $variantBox = $(`.uie-variant-box[data-variant-id="${currentVariantId}"]`);
-                $variantBox.data('variant-details', details.replace(/'/g, "&apos;")) 
-                           .data('variant-title', title.replace(/"/g, "&quot;"))
-                           .find('.uie-variant-caption').text(title);
+                $variantBox.data('variant-details', variantDetails.replace(/'/g, "&apos;")) 
+                           .data('variant-title', newVariantAdminTitle.replace(/"/g, "&quot;"))
+                           .find('.uie-variant-caption').text(newVariantAdminTitle);
                 if (typeof onVariantSavedOrUpdatedCallback === 'function') onVariantSavedOrUpdatedCallback();
-              } else { showNotification('Error updating variant: ' + (response.error || 'Failed.'), 'error'); }
-            }, error: (jqXHR, ts) => showNotification('AJAX Error updating variant: ' + ts, 'error')
+              } else { showNotification('Error updating variant: ' + (response.error || 'Operation failed.'), 'error'); }
+            },
+            error: function(jqXHR, ts, et) { showNotification('AJAX Error updating variant: ' + ts, 'error'); }
         });
     });
 
     $(document).off('click.uieSaveAsNewVariantFromExisting').on('click.uieSaveAsNewVariantFromExisting', '.uie-save-as-new-variant-button', function() {
-        if (isEditingMaster || !currentVariantId || !cropper || !cropper.ready || !currentMediaAssetId) return;
-        const cropData = cropper.getData(true); 
-        const filters = getCurrentUserAdjustedFiltersObject(); 
-        const title = ($('.uie-title-input').val() || "Forked Variant") + " (copy)"; 
-        const caption = $('.uie-caption').val(); 
-        const altText = $('.uie-alt-text').val();   
-        const details = JSON.stringify({ crop: cropData, filters, caption, altText });
+        if (isEditingMaster || !currentVariantId) { 
+            showNotification("Select an existing variant to fork from.", "info");
+            return;
+        }
+        if (!cropper || !cropper.ready || !currentMediaAssetId) {
+            showNotification("Cannot save: Editor not ready or no master image loaded.", "error"); return;
+        }
+        const cropDataForNewVariant = cropper.getData(true); 
+        const userFiltersForNewVariant = getCurrentUserAdjustedFiltersObject(); 
+        const newVariantAdminTitle = ($('.uie-title-input').val() || "Forked Variant") + " (copy)"; 
+        const newVariantPublicCaption = $('.uie-caption').val(); 
+        const newVariantAltText = $('.uie-alt-text').val();   
+
+        const variantDetails = JSON.stringify({ 
+            crop: cropDataForNewVariant, 
+            filters: userFiltersForNewVariant,
+            caption: newVariantPublicCaption,
+            altText: newVariantAltText
+        });
+
         $.ajax({
             url: 'ajax/saveMediaVariant.php', type: 'POST', 
-            data: { media_asset_id: currentMediaAssetId, variant_type: title, variant_details: details },
+            data: {
+                media_asset_id: currentMediaAssetId, 
+                variant_type: newVariantAdminTitle, 
+                variant_details: variantDetails
+            },
             dataType: 'json',
             success: function(response) {
               if (response.success && response.variant_id) {
                 showNotification(`New Variant ${response.variant_id} (forked) saved!`, 'success');
                 loadAndDisplayVariants(currentMediaAssetId); 
                 currentVariantId = response.variant_id; 
-                $('.uie-title-input').val(title); 
+                $('.uie-title-input').val(newVariantAdminTitle); 
                 updateActionButtons();
                 if (typeof onVariantSavedOrUpdatedCallback === 'function') onVariantSavedOrUpdatedCallback();
-              } else { showNotification('Error forking variant: ' + (response.error || 'Failed.'), 'error'); }
-            }, error: (jqXHR, ts) => showNotification('AJAX Error forking variant: ' + ts, 'error')
+              } else { showNotification('Error forking variant: ' + (response.error || 'Operation failed.'), 'error'); }
+            },
+            error: function(jqXHR, ts, et) { showNotification('AJAX Error forking variant: ' + ts, 'error'); }
         });
     });
 
     $(document).off('click.uieSaveNewImage').on('click.uieSaveNewImage', '.uie-save-as-new-image-button', function() {
-        if (!isCurrentMasterPhysical) { 
-            showNotification("'Save as New Image' is only available when the current master image is a physical asset.", "warning");
+        if ((isEditingMaster && !isCurrentMasterPhysical) || (!isEditingMaster && !isCurrentMasterPhysical)) {
+            showNotification("'Save as New Image' is only available when the base image is a physical asset.", "warning");
             return;
         }
+
         if (!cropper || !cropper.ready) {
             showNotification("Editor not ready to save new image.", "error"); return;
         }
-        const cropData = cropper.getData(true); 
-        const filters = getCurrentUserAdjustedFiltersObject();
-        const title = $('.uie-title-input').val(); 
-        const caption = $('.uie-caption').val();
-        const altText = $('.uie-alt-text').val();
-        // --- NEW: Get Source URL and Attribution for the new virtual master ---
-        // These are taken from the current UIE fields, which reflect the master's values.
-        const sourceUrlForNewVM = $('#uie-source-url-input').val(); 
-        const attributionForNewVM = $('#uie-attribution-input').val();
-        // --- END NEW ---
+        
+        const finalCropDataForNewMaster = cropper.getData(true); 
+        const newMasterDefaultFilters = getCurrentUserAdjustedFiltersObject();
+        const newMasterAdminTitle = $('.uie-title-input').val(); 
+        const newMasterPublicCaption = $('.uie-caption').val();
+        const newMasterAltText = $('.uie-alt-text').val();
+
         $.ajax({
-            url: 'ajax/saveNewImage.php', type: 'POST',
+            url: 'ajax/saveNewImage.php',
+            type: 'POST',
             data: {
                 source_media_asset_id: currentPhysicalSourceAssetId, 
-                current_crop_json: JSON.stringify(cropData), 
-                current_filters_json: JSON.stringify(filters), 
-                new_admin_title: title, 
-                new_public_caption: caption,
-                new_alt_text: altText, 
-                // --- NEW: Send Source URL and Attribution for the new virtual master ---
-                new_source_url: sourceUrlForNewVM, 
-                new_attribution: attributionForNewVM 
-                // --- END NEW ---
+                current_crop_json: JSON.stringify(finalCropDataForNewMaster), 
+                current_filters_json: JSON.stringify(newMasterDefaultFilters), 
+                new_admin_title: newMasterAdminTitle, 
+                new_public_caption: newMasterPublicCaption,
+                new_alt_text: newMasterAltText,
+                new_attribution: '' 
             },
             dataType: 'json',
             success: function(response) {
                 if (response.success && response.media && response.media.id) {
                     showNotification('New Virtual Master Image (ID: ' + response.media.id + ') created!', 'success');
-                    if (typeof onVariantSavedOrUpdatedCallback === 'function') onVariantSavedOrUpdatedCallback(); 
+                    if (typeof onVariantSavedOrUpdatedCallback === 'function') {
+                        onVariantSavedOrUpdatedCallback(); 
+                    }
+                    // Reload the editor with the newly created virtual master
                     openEditor(
-                        response.media.image_url, response.media,           
-                        onVariantSavedOrUpdatedCallback, onEditorClosedCallback
+                        response.media.image_url, // This should be the physical_file_path from the new virtual master's record
+                        response.media,           // The full new media asset object for the virtual master
+                        onVariantSavedOrUpdatedCallback,
+                        onEditorClosedCallback
                     );
-                } else { showNotification('Error creating new virtual master: ' + (response.error || 'Unknown'), 'error'); }
-            }, error: (jqXHR, ts) => showNotification('AJAX error creating new virtual master: ' + ts, 'error')
+                } else {
+                    showNotification('Error creating new virtual master: ' + (response.error || 'Unknown error'), 'error');
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                showNotification('AJAX error creating new virtual master: ' + textStatus, 'error');
+            }
         });
     });
-  }; // End of bindStaticEvents
-
+  };
   return { openEditor, closeEditor };
 })();

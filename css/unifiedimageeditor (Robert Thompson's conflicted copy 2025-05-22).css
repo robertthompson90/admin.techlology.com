@@ -589,9 +589,3 @@
 .hidden {
     display: none !important;
 }
-
-#uie-selected-tags-container {
-    margin-top: 10px; 
-    min-height: 22px; /* Adjust as needed */
-    /* Add any other UIE-specific container layout styles here */
-}
