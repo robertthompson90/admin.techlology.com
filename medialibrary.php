@@ -22,7 +22,7 @@ include 'inc/loginanddb.php';
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css" crossorigin="anonymous">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" crossorigin="anonymous"></script>
-  </head>
+</head>
 <body class="media-library-page">
   <div class="layout">
     <div class="sidebar">
@@ -42,6 +42,10 @@ include 'inc/loginanddb.php';
           <select id="media-tag-filter">
             <option value="">All Tags</option>
             </select>
+        </div>
+        <div>
+          <input type="checkbox" id="media-show-variants" name="media-show-variants">
+          <label for="media-show-variants">Show Variants</label>
         </div>
         <button id="media-upload-button" type="button" class="upload-btn" style="margin-left: auto;">Upload Media</button>
       </div>
