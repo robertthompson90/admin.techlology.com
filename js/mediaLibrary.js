@@ -1,5 +1,5 @@
 // js/mediaLibrary.js
-// Version 2.24.1 (Corrected UIE Click Handler for Variants)
+// Version 2.24.2 (Corrected UIE Click Handler for Variants & Options Passing)
 var MediaLibrary = (function($){ 
 
   const getCssFilterStringForLibrary = (filtersObject) => {
@@ -77,7 +77,7 @@ var MediaLibrary = (function($){
       mediaArray.forEach(function(mediaAsset) { 
         var $item = $("<div></div>")
                       .addClass("global-media-item") 
-                      .data("asset-data", mediaAsset); 
+                      .data("asset-data", mediaAsset); // Store the full asset data (master or variant)
 
         const isVirtualMaster = mediaAsset.physical_source_asset_id &&
                                 mediaAsset.physical_source_asset_id !== mediaAsset.id &&
@@ -115,54 +115,76 @@ var MediaLibrary = (function($){
         $item.append($imgContainer).append($titleDiv);
         
         $item.on("click", function(){
-          var assetDataForEditor = $(this).data("asset-data");
+          var clickedAssetData = $(this).data("asset-data");
           
-          if (!assetDataForEditor) { // Simplified check
+          if (!clickedAssetData || !clickedAssetData.id) { 
             showNotification("Error: Media asset data is missing for this item.", "error");
             console.warn("Missing asset data for item:", $(this));
             return;
           }
-          // ID check will happen after masterAssetDataToLoadInUIE is formed
           
-          let masterAssetDataToLoadInUIE;
-          let physicalUrlForUIE = assetDataForEditor.image_url; 
+          let masterAssetDataForUIE;
+          let physicalUrlForUIE = clickedAssetData.image_url; // Physical URL is from the clicked asset data
+          let uieOpenOptions = {}; // Options for UIE, including target variant
 
-          if (assetDataForEditor.is_variant) {
-            // When a variant is clicked, construct the object for its MASTER asset to open in UIE
-            masterAssetDataToLoadInUIE = {
-                id: assetDataForEditor.media_asset_id_for_variant, // CRITICAL: Use the master's ID
-                admin_title: assetDataForEditor.master_admin_title,
-                public_caption: assetDataForEditor.master_public_caption,
-                alt_text: assetDataForEditor.master_alt_text,
-                source_url: assetDataForEditor.master_source_url,
-                attribution: assetDataForEditor.master_attribution,
-                default_crop: assetDataForEditor.master_default_crop,
-                filter_state: assetDataForEditor.master_filter_state,
-                physical_source_asset_id: assetDataForEditor.master_physical_source_asset_id, 
-                image_url: assetDataForEditor.image_url // This is the physical image URL, same for master & variant
+          if (clickedAssetData.is_variant) {
+            console.log("Clicked a VARIANT. Original variant data:", clickedAssetData);
+            // Construct the object for its MASTER asset to open in UIE
+            masterAssetDataForUIE = {
+                id: clickedAssetData.media_asset_id_for_variant, 
+                admin_title: clickedAssetData.master_admin_title,
+                public_caption: clickedAssetData.master_public_caption,
+                alt_text: clickedAssetData.master_alt_text,
+                source_url: clickedAssetData.master_source_url,
+                attribution: clickedAssetData.master_attribution,
+                default_crop: clickedAssetData.master_default_crop,
+                filter_state: clickedAssetData.master_filter_state,
+                physical_source_asset_id: clickedAssetData.master_physical_source_asset_id, 
+                image_url: clickedAssetData.image_url 
             };
-            console.log("Clicked a VARIANT. Preparing its MASTER for UIE:", masterAssetDataToLoadInUIE);
+
+            // Prepare options for UIE to preload this specific variant
+            uieOpenOptions.targetVariantId = clickedAssetData.variant_id;
+            try {
+                // getGlobalMedia.php should provide variant_details_parsed
+                if (clickedAssetData.variant_details_parsed) {
+                    uieOpenOptions.targetVariantDetails = clickedAssetData.variant_details_parsed;
+                } else if (clickedAssetData.variant_details) {
+                    // Fallback if parsed version isn't directly available
+                    uieOpenOptions.targetVariantDetails = JSON.parse(clickedAssetData.variant_details);
+                } else {
+                    throw new Error("Variant details are missing.");
+                }
+            } catch (e) {
+                console.error("Error parsing variant_details from clicked variant data:", e, clickedAssetData.variant_details);
+                showNotification("Error: Could not parse variant details for preloading.", "error");
+                return; 
+            }
+            uieOpenOptions.targetVariantTitle = clickedAssetData.variant_type || `Variant ${clickedAssetData.variant_id}`;
+            
+            console.log("Preparing MASTER for UIE:", masterAssetDataForUIE, "with options to preload VARIANT:", uieOpenOptions);
+
           } else {
-             // If it's not a variant, it's a master (physical or virtual)
-             masterAssetDataToLoadInUIE = assetDataForEditor;
-             console.log("Clicked a MASTER. Opening in UIE:", masterAssetDataToLoadInUIE);
+             // It's a master (physical or virtual)
+             masterAssetDataForUIE = clickedAssetData;
+             console.log("Clicked a MASTER. Opening in UIE:", masterAssetDataForUIE);
+             // No specific variant to preload, uieOpenOptions remains empty
           }
           
-          // Now check if the data to load into UIE is valid
-          if (!masterAssetDataToLoadInUIE || !masterAssetDataToLoadInUIE.id) {
+          if (!masterAssetDataForUIE || !masterAssetDataForUIE.id) {
             showNotification("Error: Could not determine master asset data to open in editor.", "error");
-            console.error("Master asset data for UIE is invalid:", masterAssetDataToLoadInUIE);
+            console.error("Master asset data for UIE is invalid:", masterAssetDataForUIE);
             return;
           }
           if (!physicalUrlForUIE) {
             showNotification("Error: Missing physical image URL for editor.", "error");
-            console.error("Physical URL for UIE is missing. Master Data:", masterAssetDataToLoadInUIE);
+            console.error("Physical URL for UIE is missing. Master Data:", masterAssetDataForUIE, "Clicked Asset Data:", clickedAssetData);
             return;
           }
           
           UnifiedImageEditor.openEditor(
             physicalUrlForUIE,     
-            masterAssetDataToLoadInUIE, 
+            masterAssetDataForUIE, 
             function() { 
               const currentQuery = $('#media-search-input').val();
               const currentTagFilter = $('#media-tag-filter').val();
@@ -171,7 +193,8 @@ var MediaLibrary = (function($){
             },
             function() { 
               console.log("Unified Image Editor was closed.");
-            }
+            },
+            uieOpenOptions // Pass the options object here
           );
         });        
         $globalMedia.append($item);
@@ -186,7 +209,7 @@ var MediaLibrary = (function($){
             if (isVariant && mediaAsset.variant_details_parsed) {
                 cropToUse = mediaAsset.variant_details_parsed.crop;
                 filtersToApply = mediaAsset.variant_details_parsed.filters;
-            } else {
+            } else { // For master assets (physical or virtual)
                 try {
                     if (mediaAsset.default_crop && mediaAsset.default_crop !== "null" && mediaAsset.default_crop.trim() !== "") {
                         cropToUse = JSON.parse(mediaAsset.default_crop);
@@ -214,7 +237,6 @@ var MediaLibrary = (function($){
             const tempCanvas = document.createElement('canvas');
             const tempCtx = tempCanvas.getContext('2d');
 
-            // Ensure crop dimensions are valid before setting canvas size
             if (cropToUse.width <= 0 || cropToUse.height <= 0) {
                 console.warn("Corrected invalid crop dimensions to full image for asset:", mediaAsset.id);
                 cropToUse.width = physicalImg.naturalWidth;

@@ -1,24 +1,60 @@
-// js/mediaUpload.js
 var MediaUpload = (function(){
   function init() {
-    // If upload UI is not already present, create it.
-    if ($("#global-media").prev(".media-upload").length === 0) {
-      var $uploadDiv = $("<div>").addClass("media-upload");
-      var $fileInput = $("<input type='file' accept='image/*'>").css({ display: "none" });
-      var $uploadBtn = $("<button type='button'>Upload Media</button>").addClass("upload-btn");
+    var $existingUploadBtn = $("#media-upload-button");
+    var $existingFileInput = $("#media-file-input-hidden");
+
+    // Check if the specific button and input from medialibrary.php exist
+    if ($existingUploadBtn.length && $existingFileInput.length) {
+      // If they exist, bind event handlers to them
+      console.log("MediaUpload.js: Binding to existing #media-upload-button and #media-file-input-hidden.");
       
-      $uploadBtn.on("click", function(){
-        $fileInput.click();
+      $existingUploadBtn.off('click').on("click", function(){
+        $existingFileInput.click(); // Trigger click on the existing hidden file input
       });
       
-      $fileInput.on("change", function(){
+      $existingFileInput.off('change').on("change", function(){
         var file = this.files[0];
         if (!file) return;
+        // The existing checkDuplicateAndUpload function should work as is
         checkDuplicateAndUpload(file);
+        // Clear the file input's value after processing.
+        // This allows the user to select the same file again if they need to.
+        $(this).val('');
       });
+
+    } else {
+      // Fallback: If the specific IDs aren't found, try the original dynamic creation logic.
+      // This might be for other pages (like addarticle.php) that use this script.
+      console.log("MediaUpload.js: #media-upload-button and #media-file-input-hidden not found. Attempting dynamic UI creation if applicable.");
       
-      $uploadDiv.append($uploadBtn).append($fileInput);
-      $("#global-media").prev(".media-search").before($uploadDiv);
+      // Original check for dynamic creation context
+      var $globalMedia = $("#global-media");
+      var $mediaSearch = $globalMedia.prev(".media-search"); // Check if .media-search exists before #global-media
+      
+      if ($globalMedia.length && $mediaSearch.length && $mediaSearch.prev(".media-upload").length === 0) {
+          console.log("MediaUpload.js: Dynamically creating upload UI.");
+          var $uploadDiv = $("<div>").addClass("media-upload");
+          // Note: The dynamically created input here doesn't have an ID,
+          // so it won't conflict with #media-file-input-hidden from medialibrary.php
+          var $dynamicFileInput = $("<input type='file' accept='image/*'>").css({ display: "none" });
+          var $dynamicUploadBtn = $("<button type='button'>Upload Media</button>").addClass("upload-btn");
+          
+          $dynamicUploadBtn.on("click", function(){
+            $dynamicFileInput.click();
+          });
+          
+          $dynamicFileInput.on("change", function(){
+            var file = this.files[0];
+            if (!file) return;
+            checkDuplicateAndUpload(file);
+            $(this).val(''); // Clear the dynamic file input's value
+          });
+          
+          $uploadDiv.append($dynamicUploadBtn).append($dynamicFileInput);
+          $mediaSearch.before($uploadDiv); // Place it before the .media-search div
+      } else {
+        console.log("MediaUpload.js: No specific upload button IDs found, and dynamic creation conditions not met or UI already exists.");
+      }
     }
   }
   
@@ -41,7 +77,15 @@ var MediaUpload = (function(){
             if (response.duplicate) {
               if (confirm("This media already exists. Would you like to use the existing file?")) {
                 Notifications.show("Using existing media", "info");
-                MediaLibrary.loadMedia();
+                // Assuming MediaLibrary.loadMedia() reloads the library view.
+                if (typeof MediaLibrary !== 'undefined' && MediaLibrary.loadMedia) {
+                  // Make sure to pass current filter values when reloading
+                  MediaLibrary.loadMedia(
+                    $('#media-search-input').val() || "", 
+                    $('#media-tag-filter').val() || "", 
+                    $('#media-show-variants').is(':checked') || false
+                  );
+                }
               } else {
                 Notifications.show("Upload cancelled.", "info");
               }
@@ -69,7 +113,11 @@ var MediaUpload = (function(){
         return hashHex;
       });
     }
-    return Promise.resolve("");
+    // Fallback for environments where crypto.subtle is not available (e.g. http without secure context)
+    console.warn("crypto.subtle not available. Using a basic file size and name for duplicate check fallback (less reliable).");
+    // This is a placeholder. For a production environment without HTTPS, 
+    // you might need a more robust client-side hashing library or rely solely on server-side checks.
+    return Promise.resolve("fallback_" + arrayBuffer.byteLength + "_" + Date.now()); 
   }
   
   function uploadMedia(file, hash) {
@@ -88,9 +136,16 @@ var MediaUpload = (function(){
       success: function(response) {
         if (response.success) {
           Notifications.show("Media uploaded successfully", "success");
-          MediaLibrary.loadMedia();
+           if (typeof MediaLibrary !== 'undefined' && MediaLibrary.loadMedia) {
+             // Make sure to pass current filter values when reloading
+             MediaLibrary.loadMedia(
+               $('#media-search-input').val() || "", 
+               $('#media-tag-filter').val() || "", 
+               $('#media-show-variants').is(':checked') || false
+             );
+           }
         } else {
-          Notifications.show("Error: " + response.error, "error");
+          Notifications.show("Error: " + (response.error || "Upload failed."), "error");
         }
       },
       error: function() {
