@@ -391,3 +391,36 @@ label {
 .polaroid .remove-photo:hover {
   background: #d32f2f;
 }
+
+
+/* jQuery UI Autocomplete Suggestions Box Theme for UIE */
+.ui-autocomplete { 
+    background-color: #2d3035; 
+    border: 1px solid #3c3f44; 
+    color: #e0e0e0;
+    list-style: none;
+    padding: 5px 0;
+    margin: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 10005; /* Ensure above other UIE elements */
+    border-radius: 3px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.ui-autocomplete .ui-menu-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+}
+.ui-autocomplete .ui-menu-item.ui-state-active,
+.ui-autocomplete .ui-menu-item:hover {
+    background-color: #007bff; /* Your UIE accent color */
+    color: #ffffff;
+    border-color: #007bff;
+}
+.ui-autocomplete .ui-menu-item .ui-menu-item-wrapper { /* If using custom item rendering */
+    color: inherit; 
+}
