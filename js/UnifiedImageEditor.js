@@ -1,5 +1,5 @@
 // UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, crop fixes, variant caching, source/attribution fields, and variant preloading.
-// Version 2.22.8 (Improved Variant Preload & Logging)
+// Version 2.22.12 (Corrected Preset Loaders)
 
 const UnifiedImageEditor = (() => {
   'use strict';
@@ -38,8 +38,7 @@ const UnifiedImageEditor = (() => {
 
   let cachedVariantsForCurrentMaster = [];
   let variantsInitiallyLoadedForMaster = false;
-
-  // Temp storage for preload options from MediaLibrary.js
+  
   let localTargetVariantToPreloadId = null;
   let localTargetVariantToPreloadDetails = null;
   let localTargetVariantToPreloadTitle = null;
@@ -282,7 +281,9 @@ const UnifiedImageEditor = (() => {
                 </div>
                 <div class="uie-variant-thumbnails">
                   <div class="uie-panel-header">Variants</div>
-                  <div class="uie-variant-scroll"></div>
+                  <div class="uie-variant-scroll">
+                     <div class="uie-loading-indicator variants-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Loading Variants...</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -332,8 +333,18 @@ const UnifiedImageEditor = (() => {
                     </div>
                   </div>
                   <div class="uie-presets-column">
-                    <div class="uie-presets-row uie-filter-presets"><div class="uie-subpanel-header">Filter Presets</div><div class="uie-presets-scroll"></div></div>
-                    <div class="uie-presets-row uie-crop-presets"><div class="uie-subpanel-header">Crop Presets</div><div class="uie-presets-scroll"></div></div>
+                    <div class="uie-presets-row uie-filter-presets">
+                        <div class="uie-subpanel-header">Filter Presets</div>
+                        <div class="uie-presets-scroll">
+                            <div class="uie-loading-indicator presets-loading filter-presets-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                        </div>
+                    </div>
+                    <div class="uie-presets-row uie-crop-presets">
+                        <div class="uie-subpanel-header">Crop Presets</div>
+                        <div class="uie-presets-scroll">
+                             <div class="uie-loading-indicator presets-loading crop-presets-loading" style="display:none;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+                        </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -405,49 +416,35 @@ const UnifiedImageEditor = (() => {
   };
 
   const loadMediaPresets = () => {
-    $.ajax({
-      url: 'ajax/getMediaPresets.php',
-      method: 'GET',
-      dataType: 'json',
-      success: function(response) {
-        presetsData = response;
-        $('.uie-filter-presets .uie-presets-scroll').empty();
-        $('.uie-crop-presets .uie-presets-scroll').empty();
-        if (!cropper || !cropper.ready) {
-            console.warn("loadMediaPresets: Cropper not ready for preset thumbnails.");
-            return;
-        }
-        response.forEach(function(preset) {
-          generatePresetThumbnail(preset).then(function(dataUrl) {
-            const presetBox = `
-              <div id="preset_${preset.id}" class="uie-preset-box uie-box" data-preset-id="${preset.id}" data-preset-type="${preset.type}" data-preset-details='${preset.preset_details.replace(/'/g, "&apos;")}'>
-                <div class="image-container"><img class="uie-box-img" src="${dataUrl}" alt="${preset.name}"></div>
-                <span class="uie-preset-caption uie-box-caption">${preset.name}</span>
-              </div>`;
-            if (preset.type === 'filter') {
-              $('.uie-filter-presets .uie-presets-scroll').append(presetBox);
-            } else if (preset.type === 'crop') {
-              $('.uie-crop-presets .uie-presets-scroll').append(presetBox);
+    return new Promise((resolve, reject) => {
+        // Show loading indicator for presets
+        $('.filter-presets-loading').show();
+        $('.crop-presets-loading').show();
+        // It's better to not empty the scroll area here, let updatePresetThumbnails handle it
+        // to avoid flicker if data is already present and just needs re-rendering.
+
+        $.ajax({
+            url: 'ajax/getMediaPresets.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                presetsData = response;
+                setupPresetSorting(); 
+                resolve(); 
+            },
+            error: function(err) {
+                console.error("Error loading media presets:", err);
+                $('.filter-presets-loading').hide();
+                $('.crop-presets-loading').hide();
+                $('.uie-filter-presets .uie-presets-scroll').html('<p>Error loading presets.</p>');
+                $('.uie-crop-presets .uie-presets-scroll').html('<p>Error loading presets.</p>');
+                reject(err);
             }
-          }).catch(function(err) {
-            console.error("Error generating thumbnail for preset:", preset.name, err);
-             const errorBox = `
-              <div id="preset_${preset.id}" class="uie-preset-box uie-box" data-preset-id="${preset.id}" title="Error loading preview">
-                <div class="image-container" style="background:#500; color:white; display:flex; align-items:center; justify-content:center; font-size:0.7em; text-align:center;">Preview Error</div>
-                <span class="uie-preset-caption uie-box-caption">${preset.name}</span>
-              </div>`;
-            if (preset.type === 'filter') $('.uie-filter-presets .uie-presets-scroll').append(errorBox);
-            else if (preset.type === 'crop') $('.uie-crop-presets .uie-presets-scroll').append(errorBox);
-          });
         });
-        setupPresetSorting();
-      },
-      error: function(err) {
-        console.error("Error loading media presets:", err);
-      }
     });
   };
-
+  
+  // Defined before updatePresetThumbnails
   const generatePresetThumbnail = (preset) => {
     return new Promise((resolve, reject) => {
         if (!cropper || !cropper.ready) {
@@ -534,7 +531,89 @@ const UnifiedImageEditor = (() => {
         const thumbCanvas = generateScaledThumbnail(finalPreviewCanvas);
         resolve(thumbCanvas.toDataURL());
     });
-};
+  };
+
+  const updatePresetThumbnails = () => {
+    const callGeneratePresetThumbnail = (preset) => {
+        if (typeof generatePresetThumbnail !== 'function') {
+            console.error("!!! updatePresetThumbnails -> callGeneratePresetThumbnail: generatePresetThumbnail is NOT a function when invoked for preset:", preset ? preset.name : 'N/A');
+            return Promise.resolve(`<div id="preset_${preset ? preset.id : 'error'}" class="uie-preset-box uie-box" data-preset-id="${preset ? preset.id : 'error'}" title="Generator Function Error"><div class="image-container" style="background:#800; color:white; display:flex; align-items:center; justify-content:center; font-size:0.7em; text-align:center;">Fn Err</div><span class="uie-preset-caption uie-box-caption">${preset ? preset.name : 'Error'}</span></div>`);
+        }
+        return generatePresetThumbnail(preset);
+    };
+
+    return new Promise((resolve, reject) => {
+        if (!cropper || !cropper.ready) {
+            console.warn("updatePresetThumbnails: Cropper not ready.");
+            $('.filter-presets-loading').hide();
+            $('.crop-presets-loading').hide();
+            return reject(new Error("Cropper not ready for preset thumbnails."));
+        }
+        if (!presetsData || presetsData.length === 0) {
+            console.log("updatePresetThumbnails: No presets data to render.");
+            $('.filter-presets-loading').hide();
+            $('.crop-presets-loading').hide();
+            $('.uie-filter-presets .uie-presets-scroll').empty();
+            $('.uie-crop-presets .uie-presets-scroll').empty();
+            return resolve();
+        }
+
+        console.log("updatePresetThumbnails: Starting generation for", presetsData.length, "presets.");
+        // Ensure loaders are visible before emptying, then empty
+        $('.filter-presets-loading').show();
+        $('.crop-presets-loading').show();
+        $('.uie-filter-presets .uie-presets-scroll').empty().append($('.filter-presets-loading').show());
+        $('.uie-crop-presets .uie-presets-scroll').empty().append($('.crop-presets-loading').show());
+
+
+        const thumbnailPromises = presetsData.map(preset =>
+            callGeneratePresetThumbnail(preset) 
+                .catch(err => {
+                    console.error("Error generating thumbnail for preset (in map's catch):", preset.name, err);
+                    return `<div id="preset_${preset.id}" class="uie-preset-box uie-box" data-preset-id="${preset.id}" title="Error loading preview">
+                               <div class="image-container" style="background:#500; color:white; display:flex; align-items:center; justify-content:center; font-size:0.7em; text-align:center;">Preview Error</div>
+                               <span class="uie-preset-caption uie-box-caption">${preset.name}</span>
+                             </div>`;
+                })
+        );
+
+        Promise.all(thumbnailPromises)
+            .then(generatedHtmlOrDataUrls => {
+                $('.uie-filter-presets .uie-presets-scroll').empty(); // Clear loaders/previous content
+                $('.uie-crop-presets .uie-presets-scroll').empty();
+
+                generatedHtmlOrDataUrls.forEach((result, index) => {
+                    const preset = presetsData[index];
+                    let presetBoxHtml;
+                    if (typeof result === 'string' && result.startsWith('<div')) { 
+                        presetBoxHtml = result;
+                    } else { 
+                         presetBoxHtml = `
+                          <div id="preset_${preset.id}" class="uie-preset-box uie-box" data-preset-id="${preset.id}" data-preset-type="${preset.type}" data-preset-details='${preset.preset_details.replace(/'/g, "&apos;")}'>
+                            <div class="image-container"><img class="uie-box-img" src="${result}" alt="${preset.name}"></div>
+                            <span class="uie-preset-caption uie-box-caption">${preset.name}</span>
+                          </div>`;
+                    }
+                    if (preset.type === 'filter') {
+                      $('.uie-filter-presets .uie-presets-scroll').append(presetBoxHtml);
+                    } else if (preset.type === 'crop') {
+                      $('.uie-crop-presets .uie-presets-scroll').append(presetBoxHtml);
+                    }
+                });
+                console.log("updatePresetThumbnails: All preset thumbnails processed.");
+                resolve(); 
+            })
+            .catch(overallError => {
+                console.error("updatePresetThumbnails: Overall error processing preset thumbnails:", overallError);
+                reject(overallError); 
+            })
+            .finally(() => {
+                $('.filter-presets-loading').hide();
+                $('.crop-presets-loading').hide();
+            });
+    });
+  };
+
 
   const setupPresetSorting = () => {
     $('.uie-filter-presets .uie-presets-scroll, .uie-crop-presets .uie-presets-scroll').sortable({
@@ -561,25 +640,9 @@ const UnifiedImageEditor = (() => {
 
   debouncedUpdateThumbnails = debounce(() => {
     if (!cropper || !cropper.ready) return;
+    console.log("Debounced call to updatePresetThumbnails triggered.");
     updatePresetThumbnails();
   }, 500); 
-
-  const updatePresetThumbnails = () => {
-    $('.uie-preset-box').each(function() {
-      let $box = $(this);
-      let presetId = $box.data('preset-id');
-      let preset = presetsData.find(p => String(p.id) === String(presetId));
-      if (!preset) {
-        return;
-      }
-      generatePresetThumbnail(preset).then(function(dataUrl) {
-        $box.find('.uie-box-img').attr('src', dataUrl);
-      }).catch(function(err) {
-        console.error("Error updating preset thumbnail for ID:", presetId, err);
-         $box.find('.image-container').html('Preview Error').css({'background':'#500', 'color':'white', 'display':'flex', 'align-items':'center', 'justify-content':'center', 'font-size':'0.7em', 'text-align':'center'});
-      });
-    });
-  };
 
   const bindPresetEvents = () => {
     $(document).off('click.uiePreset').on('click.uiePreset', '.uie-preset-box', function() {
@@ -695,7 +758,6 @@ const UnifiedImageEditor = (() => {
             const imageH = effectiveCropperSourceDimensions.height;
             let fitZoom = 1.0; 
 
-
             if (imageW > 0 && imageH > 0 && container.width > 0 && container.height > 0) {
                 fitZoom = Math.min(container.width / imageW, container.height / imageH);
             }
@@ -775,28 +837,51 @@ const UnifiedImageEditor = (() => {
             
             updateDisplayedDimensions(); 
             requestAnimationFrame(pollZoomSlider);
-            loadMediaPresets(); 
-
-            if (mergedOptions.refreshVariants || !variantsInitiallyLoadedForMaster) {
-                console.log("initializeCropperInstance: Calling loadAndDisplayVariants. isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
-                loadAndDisplayVariants(currentMediaAssetId); 
-            } else {
-                console.log("initializeCropperInstance: Skipped refetching variants, using cache. Highlighting based on: isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
-                if (!isEditingMaster && currentVariantId) {
-                    $('.uie-variant-box').removeClass('active-variant'); 
-                    $(`.uie-variant-box[data-variant-id="${currentVariantId}"]`).addClass('active-variant');
-                     $('#uie-source-thumbnail-box').removeClass('active-variant');
-                     $('.uie-source-label').show().html(`${currentMediaAssetAdminTitle}&nbsp;&gt;&nbsp;`);
-                } else if (isEditingMaster) {
-                    $('.uie-variant-box').removeClass('active-variant');
-                    $('#uie-source-thumbnail-box').addClass('active-variant');
-                    $('.uie-source-label').hide().empty();
-                }
-            }
             
-            bindPresetEvents(); 
-            updateActionButtons(); 
-            updatePresetThumbnails(); 
+            // --- Deferred loading for thumbnails ---
+            setTimeout(async () => {
+                if (!cropper || !cropper.ready) return; // Re-check cropper
+                console.log("Deferred: Starting to load presets and variants thumbnails.");
+                
+                // Load Presets and then update their thumbnails
+                try {
+                    await loadMediaPresets(); // Fetches data
+                    if (presetsData.length > 0) {
+                        await updatePresetThumbnails(); // Renders thumbnails
+                    } else {
+                         $('.presets-loading').hide(); // Hide if no presets
+                    }
+                } catch (presetError) {
+                    console.error("Deferred: Error in preset loading/rendering chain:", presetError);
+                     $('.presets-loading').hide();
+                }
+
+                // Load Variants and their thumbnails
+                if (mergedOptions.refreshVariants || !variantsInitiallyLoadedForMaster) {
+                    console.log("Deferred: Calling loadAndDisplayVariants. isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
+                    loadAndDisplayVariants(currentMediaAssetId); // This will handle its own loading indicator
+                } else {
+                    // If not refreshing, ensure correct highlighting based on current state
+                    console.log("Deferred: Skipped refetching variants. Highlighting based on: isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
+                    if (!isEditingMaster && currentVariantId) {
+                        $('.uie-variant-box').removeClass('active-variant'); 
+                        $(`.uie-variant-box[data-variant-id="${currentVariantId}"]`).addClass('active-variant');
+                        $('#uie-source-thumbnail-box').removeClass('active-variant');
+                        $('.uie-source-label').show().html(`${currentMediaAssetAdminTitle}&nbsp;&gt;&nbsp;`);
+                    } else if (isEditingMaster) {
+                        $('.uie-variant-box').removeClass('active-variant');
+                        $('#uie-source-thumbnail-box').addClass('active-variant');
+                        $('.uie-source-label').hide().empty();
+                    }
+                    $('.variants-loading').hide(); // Hide if not refreshing
+                }
+                
+                bindPresetEvents(); 
+                updateActionButtons(); // Ensure buttons are correct after all async ops
+                
+            }, 0);
+            // --- End Deferred loading ---
+
 
             localTargetVariantToPreloadId = null;
             localTargetVariantToPreloadDetails = null;
@@ -926,7 +1011,8 @@ const UnifiedImageEditor = (() => {
 
     $('#uie-source-thumbnail-box .uie-box-img').attr('src', '').attr('alt', 'Loading source preview...');
     $('#uie-source-thumbnail-box .uie-box-caption').text(currentMediaAssetAdminTitle); 
-    $('.uie-variant-scroll').empty().html('<p>Loading image for variants...</p>');
+    $('.uie-variant-scroll').empty().html('<div class="uie-loading-indicator variants-loading"><i class="fas fa-spinner fa-spin"></i> Loading Variants...</div>'); // Show loader immediately
+    
     $('#uie-source-url-input').val(currentMasterSourceUrl);
     $('#uie-attribution-input').val(currentMasterAttribution);
 
@@ -953,21 +1039,13 @@ const UnifiedImageEditor = (() => {
         
         try {
             console.log("UIE Source Thumb: Generating for master. Base image natural dims:", activeBaseImageElement.naturalWidth, "x", activeBaseImageElement.naturalHeight);
-            console.log("UIE Source Thumb: Master default crop:", JSON.stringify(currentAssetDefaultCrop));
-            console.log("UIE Source Thumb: Master default filters:", JSON.stringify(currentAssetDefaultFilters));
-
             const masterPreviewCanvas = await generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, null, null);
-            console.log("UIE Source Thumb: masterPreviewCanvas dimensions:", masterPreviewCanvas.width, "x", masterPreviewCanvas.height);
-            
             if (masterPreviewCanvas.width === 0 || masterPreviewCanvas.height === 0) {
                 console.warn("UIE Source Thumb: masterPreviewCanvas has zero dimensions. Thumbnail will be empty/error.");
                  $('#uie-source-thumbnail-box .uie-box-img').attr('src','').attr('alt', 'Preview Error (Zero Dim)');
             } else {
                 const scaledThumbCanvas = generateScaledThumbnail(masterPreviewCanvas, 85, 70); 
-                console.log("UIE Source Thumb: scaledThumbCanvas dimensions:", scaledThumbCanvas.width, "x", scaledThumbCanvas.height);
-                const dataURL = scaledThumbCanvas.toDataURL();
-                console.log("UIE Source Thumb: Setting src. DataURL length:", dataURL.length);
-                $('#uie-source-thumbnail-box .uie-box-img').attr('src', dataURL).attr('alt', 'Source Thumbnail');
+                $('#uie-source-thumbnail-box .uie-box-img').attr('src', scaledThumbCanvas.toDataURL()).attr('alt', 'Source Thumbnail');
             }
         } catch (thumbError) {
             console.error("Error generating UIE source thumbnail:", thumbError);
@@ -977,9 +1055,10 @@ const UnifiedImageEditor = (() => {
         let imageSrcToLoadInCropper;
         let initialSettingsForCropper = null;
 
+        // This logic determines the initial state of the editor (master vs. variant)
         if (localTargetVariantToPreloadId && localTargetVariantToPreloadDetails) {
             console.log("openEditor (preload path): Setting state for variant:", localTargetVariantToPreloadId);
-            isEditingMaster = false;
+            isEditingMaster = false; // CRITICAL: Set state before initializing cropper
             currentVariantId = localTargetVariantToPreloadId;
 
             if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) {
@@ -997,7 +1076,7 @@ const UnifiedImageEditor = (() => {
             $('.uie-alt-text').val(localTargetVariantToPreloadDetails.altText || '');
         } else { 
             console.log("openEditor (master path): Setting state for master:", currentMediaAssetId);
-            isEditingMaster = true;
+            isEditingMaster = true; // CRITICAL: Set state
             currentVariantId = null;
             if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) {
                 imageSrcToLoadInCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
@@ -1011,6 +1090,8 @@ const UnifiedImageEditor = (() => {
         }
         
         $('#uie-overlay').removeClass('hidden').fadeIn(300, () => {
+            // Pass refreshVariants: true so variants are always loaded on open,
+            // this allows highlighting logic in loadAndDisplayVariants to work correctly.
             initializeCropperInstance(imageSrcToLoadInCropper, initialSettingsForCropper, { refreshVariants: true }); 
         });
     };
@@ -1019,6 +1100,7 @@ const UnifiedImageEditor = (() => {
         showNotification("Error: Could not load the main image. Editor cannot open.", "error");
         activeBaseImageElement = null;
         $('#uie-source-thumbnail-box .uie-box-img').attr('src','').attr('alt', 'Load Error');
+        $('.variants-loading').hide(); // Hide loader on error too
         if (typeof onEditorClosedCallback === 'function') onEditorClosedCallback();
     };
     imagePreloader.src = currentMediaAssetUrl; 
@@ -1100,24 +1182,30 @@ const UnifiedImageEditor = (() => {
 
   const loadAndDisplayVariants = (mediaAssetIdToLoad) => {
     console.log("loadAndDisplayVariants: Entered. isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
+     // Show loading indicator for variants when this function starts
+    $('.variants-loading').show();
+    $('.uie-variant-scroll').empty().append($('.variants-loading'));
+
+
     if (!mediaAssetIdToLoad) {
         $('.uie-variant-scroll').empty().append('<p>No image selected.</p>');
+        $('.variants-loading').hide();
         return;
     }
     if (!activeBaseImageElement || !activeBaseImageElement.complete || !activeBaseImageElement.naturalWidth) {
         $('.uie-variant-scroll').empty().append('<p>Base image not ready for variant previews.</p>');
+        $('.variants-loading').hide();
         console.warn("loadAndDisplayVariants: activeBaseImageElement not ready.");
         return;
     }
-    $('.uie-variant-scroll').empty().html('<p>Loading variants...</p>');
-
+    
     $.ajax({
       url: 'ajax/getMediaVariants.php',
       type: 'GET',
       data: { media_asset_id: mediaAssetIdToLoad }, 
       dataType: 'json',
       success: function(response) {
-        $('.uie-variant-scroll').empty();
+        $('.uie-variant-scroll').empty(); // Clear loader before adding content
         cachedVariantsForCurrentMaster = []; 
 
         if (response.success && response.variants && response.variants.length > 0) {
@@ -1180,9 +1268,11 @@ const UnifiedImageEditor = (() => {
           $('.uie-variant-scroll').append(`<p>Error loading variants: ${response.error || 'Unknown server error'}</p>`);
         }
         variantsInitiallyLoadedForMaster = true; 
+        $('.variants-loading').hide(); // Hide loader on success
       },
       error: function(jqXHR, textStatus, errorThrown) {
         $('.uie-variant-scroll').empty().append('<p>AJAX error loading variants.</p>');
+        $('.variants-loading').hide(); // Hide loader on error
         variantsInitiallyLoadedForMaster = true; 
       }
     });
@@ -1247,7 +1337,7 @@ const UnifiedImageEditor = (() => {
               const detailsToParse = typeof variantDetailsString === 'string' ? variantDetailsString : JSON.stringify(variantDetailsString);
               const fallbackDetails = JSON.parse(detailsToParse.replace(/&apos;/g, "'"));
               console.warn("Using fallback details from data-attribute for variant:", clickedVariantId);
-              await applyVariantStateToEditor(clickedVariantId, fallbackDetails, variantAdminTitleFallback, false); // Not a preload
+              await applyVariantStateToEditor(clickedVariantId, fallbackDetails, variantAdminTitleFallback, false); // isPreload is false for clicks within UIE
           } catch (e) {
               console.error("Completely failed to get variant details for ID:", clickedVariantId, e);
               showNotification("Error loading variant details. Check console.", "error");
@@ -1267,7 +1357,7 @@ const UnifiedImageEditor = (() => {
           return;
       }
       
-      await applyVariantStateToEditor(clickedVariantId, variantDetails, variantAdminTitle, false); // Not a preload
+      await applyVariantStateToEditor(clickedVariantId, variantDetails, variantAdminTitle, false); // isPreload is false for clicks within UIE
     });
   };
 
