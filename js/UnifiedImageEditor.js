@@ -1,5 +1,5 @@
 // UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, crop fixes, variant caching, source/attribution fields, and variant preloading.
-// Version 2.22.12 (Corrected Preset Loaders)
+// Version 2.22.11 (Deferred Thumbnail Loading & Indicators - Defensive Ref for Thumbnail Gen)
 
 const UnifiedImageEditor = (() => {
   'use strict';
@@ -417,11 +417,9 @@ const UnifiedImageEditor = (() => {
 
   const loadMediaPresets = () => {
     return new Promise((resolve, reject) => {
-        // Show loading indicator for presets
-        $('.filter-presets-loading').show();
-        $('.crop-presets-loading').show();
-        // It's better to not empty the scroll area here, let updatePresetThumbnails handle it
-        // to avoid flicker if data is already present and just needs re-rendering.
+        $('.presets-loading').show();
+        $('.uie-filter-presets .uie-presets-scroll').empty().html($('.filter-presets-loading').show().clone()); 
+        $('.uie-crop-presets .uie-presets-scroll').empty().html($('.crop-presets-loading').show().clone());
 
         $.ajax({
             url: 'ajax/getMediaPresets.php',
@@ -434,8 +432,7 @@ const UnifiedImageEditor = (() => {
             },
             error: function(err) {
                 console.error("Error loading media presets:", err);
-                $('.filter-presets-loading').hide();
-                $('.crop-presets-loading').hide();
+                $('.presets-loading').hide();
                 $('.uie-filter-presets .uie-presets-scroll').html('<p>Error loading presets.</p>');
                 $('.uie-crop-presets .uie-presets-scroll').html('<p>Error loading presets.</p>');
                 reject(err);
@@ -443,8 +440,8 @@ const UnifiedImageEditor = (() => {
         });
     });
   };
-  
-  // Defined before updatePresetThumbnails
+
+  // This function is defined before updatePresetThumbnails
   const generatePresetThumbnail = (preset) => {
     return new Promise((resolve, reject) => {
         if (!cropper || !cropper.ready) {
@@ -533,7 +530,10 @@ const UnifiedImageEditor = (() => {
     });
   };
 
+
   const updatePresetThumbnails = () => {
+    // Helper to ensure closure captures the correct generatePresetThumbnail
+    // This is a defensive measure.
     const callGeneratePresetThumbnail = (preset) => {
         if (typeof generatePresetThumbnail !== 'function') {
             console.error("!!! updatePresetThumbnails -> callGeneratePresetThumbnail: generatePresetThumbnail is NOT a function when invoked for preset:", preset ? preset.name : 'N/A');
@@ -545,29 +545,24 @@ const UnifiedImageEditor = (() => {
     return new Promise((resolve, reject) => {
         if (!cropper || !cropper.ready) {
             console.warn("updatePresetThumbnails: Cropper not ready.");
-            $('.filter-presets-loading').hide();
-            $('.crop-presets-loading').hide();
+            $('.presets-loading').hide();
             return reject(new Error("Cropper not ready for preset thumbnails."));
         }
         if (!presetsData || presetsData.length === 0) {
             console.log("updatePresetThumbnails: No presets data to render.");
-            $('.filter-presets-loading').hide();
-            $('.crop-presets-loading').hide();
+            $('.presets-loading').hide();
             $('.uie-filter-presets .uie-presets-scroll').empty();
             $('.uie-crop-presets .uie-presets-scroll').empty();
             return resolve();
         }
 
         console.log("updatePresetThumbnails: Starting generation for", presetsData.length, "presets.");
-        // Ensure loaders are visible before emptying, then empty
-        $('.filter-presets-loading').show();
-        $('.crop-presets-loading').show();
-        $('.uie-filter-presets .uie-presets-scroll').empty().append($('.filter-presets-loading').show());
-        $('.uie-crop-presets .uie-presets-scroll').empty().append($('.crop-presets-loading').show());
-
+        $('.uie-filter-presets .uie-presets-scroll').empty(); 
+        $('.uie-crop-presets .uie-presets-scroll').empty();
+        $('.presets-loading').show();
 
         const thumbnailPromises = presetsData.map(preset =>
-            callGeneratePresetThumbnail(preset) 
+            callGeneratePresetThumbnail(preset) // Use the helper
                 .catch(err => {
                     console.error("Error generating thumbnail for preset (in map's catch):", preset.name, err);
                     return `<div id="preset_${preset.id}" class="uie-preset-box uie-box" data-preset-id="${preset.id}" title="Error loading preview">
@@ -579,9 +574,6 @@ const UnifiedImageEditor = (() => {
 
         Promise.all(thumbnailPromises)
             .then(generatedHtmlOrDataUrls => {
-                $('.uie-filter-presets .uie-presets-scroll').empty(); // Clear loaders/previous content
-                $('.uie-crop-presets .uie-presets-scroll').empty();
-
                 generatedHtmlOrDataUrls.forEach((result, index) => {
                     const preset = presetsData[index];
                     let presetBoxHtml;
@@ -608,8 +600,7 @@ const UnifiedImageEditor = (() => {
                 reject(overallError); 
             })
             .finally(() => {
-                $('.filter-presets-loading').hide();
-                $('.crop-presets-loading').hide();
+                $('.presets-loading').hide();
             });
     });
   };
