@@ -424,3 +424,14 @@ label {
 .ui-autocomplete .ui-menu-item .ui-menu-item-wrapper { /* If using custom item rendering */
     color: inherit; 
 }
+
+.medialibrary-dropzone.dragover-main {
+  outline: 3px dashed #007bff; /* Or your preferred highlight */
+  outline-offset: -15px;
+  background-color: rgba(0, 123, 255, 0.05);
+  transition: outline 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+/* Ensure child elements don't interfere with dropzone detection too much */
+.medialibrary-dropzone.dragover-main * {
+  pointer-events: none;
+}

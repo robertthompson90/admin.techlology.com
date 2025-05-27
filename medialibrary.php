@@ -29,7 +29,7 @@ include 'inc/loginanddb.php';
       <?php include 'inc/nav.php'; ?>
     </div>
     
-    <div class="main">
+    <div class="main medialibrary-dropzone">
       <h1>Global Media Library Manager</h1>
 
       <div class="media-filters">
@@ -60,6 +60,7 @@ include 'inc/loginanddb.php';
 
   <script src="js/notifications.js"></script> 
   <script src="js/globalErrorHandler.js"></script>
+  <script src="js/dropzones.js"></script>
   <script src="js/tags.js"></script>
   <script src="js/UnifiedImageEditor.js"></script>
   <script src="js/mediaLibrary.js"></script>

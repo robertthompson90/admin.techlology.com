@@ -90,17 +90,22 @@ var MediaLibrary = (function($){
 
         if (isVariant) {
             $item.addClass("variant-asset");
-            let masterTitle = mediaAsset.master_admin_title || `Master ${mediaAsset.media_asset_id_for_variant}`;
-            let variantTitleText = mediaAsset.variant_type || `Variant ${mediaAsset.variant_id}`;
-            $item.attr("title", `Variant: ${variantTitleText} (of Master: '${masterTitle}')`);
-            displayTitle = `${masterTitle} > ${variantTitleText}`;
+            // Prioritize the master's admin_title, then its general title (which might be derived from caption), then a generic master ID
+            let masterTitle = mediaAsset.master_admin_title || mediaAsset.master_title || `Master ${mediaAsset.media_asset_id_for_variant}`;
+            let variantTitleText = mediaAsset.variant_type || `Variant ${mediaAsset.variant_id}`; // The variant's own type/name
+            $item.attr("title", `Variant: ${variantTitleText} (of Master: '${masterTitle}')`); // Tooltip
+            displayTitle = `${masterTitle} > ${variantTitleText}`; // Visible title for the variant
         } else if (isVirtualMaster) {
             $item.addClass("virtual-asset");
-            displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Virtual Master';
-            $item.attr("title", `Virtual Master (Source ID: ${mediaAsset.physical_source_asset_id}) - ${displayTitle}`);
-        } else { 
-            $item.attr("title", "Physical Asset");
-            displayTitle = mediaAsset.admin_title || mediaAsset.title || 'Untitled Physical Asset';
+            // Use admin_title, then derived title, then "Image [ID]" as fallback for display
+            displayTitle = mediaAsset.admin_title || mediaAsset.title || `Image ${mediaAsset.id}`;
+            // Tooltip for virtual master, incorporating the potentially updated displayTitle
+            $item.attr("title", `Virtual Master (Source ID: ${mediaAsset.physical_source_asset_id || 'N/A'}) - ${displayTitle}`);
+        } else { // This is a Physical Master
+            // Use admin_title, then derived title, then "Image [ID]" as fallback for display
+            displayTitle = mediaAsset.admin_title || mediaAsset.title || `Image ${mediaAsset.id}`;
+            // Tooltip for physical master, could also incorporate displayTitle or keep generic
+            $item.attr("title", `Physical Asset - ${displayTitle}`);
         }
                         
         var physicalImageUrl = mediaAsset.image_url || 'img/placeholder.png'; 
