@@ -50,13 +50,17 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
           <input type="text" name="title" id="title" required>
           <label for="tagline">Tagline:</label>
           <input type="text" name="tagline" id="tagline" required>
-          <!-- Thumbnail Dropzone -->
-          <div class="dropzone dropzone-thumbnail">
-            <p>Drag &amp; drop thumbnail here or click to upload</p>
-            <input type="file" name="thumbnail" accept="image/*" class="hidden-file-input">
+          <label>Article Thumbnail:</label>
+          <div class="thumbnail-controls">
+            <div class="thumbnail-preview-container">
+                <img src="img/placeholder.png" alt="Thumbnail Preview" id="articleThumbnailPreview" style="max-width: 200px; max-height: 150px; border: 1px solid #ccc; display: block;">
+            </div>
+            <button type="button" id="selectOrEditThumbnailBtn" class="btn-select-thumbnail">Select / Edit Thumbnail</button>
+            <button type="button" id="removeThumbnailBtn" class="btn-remove-thumbnail" style="display:none;">Remove Thumbnail</button>
           </div>
-          <div class="thumbnail-preview"></div>
-					<input type="hidden" name="thumbnail_cropped_data" value="">
+          <input type="hidden" name="thumbnail_media_asset_id" id="thumbnail_media_asset_id" value="">
+          <input type="hidden" name="thumbnail_media_variant_id" id="thumbnail_media_variant_id" value="">
+          <span id="thumbnailInfo" style="font-size: 0.8em; color: #aaa;"></span>
         </div>
         <div class="card">
           <h2>Tags</h2>
@@ -218,6 +222,7 @@ $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 <script src="js/mediaUpload.js"></script>
 <script src="js/undoRedo.js"></script>
 <script src="js/stagingArea.js"></script>
+<script src="js/addarticle_interactions.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
