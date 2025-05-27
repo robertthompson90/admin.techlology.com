@@ -1,5 +1,5 @@
 // UnifiedImageEditor.js – With Virtual Masters, refined variant workflow, preview generation, crop fixes, variant caching, source/attribution fields, and variant preloading.
-// Version 2.22.11 (Deferred Thumbnail Loading & Indicators - Defensive Ref for Thumbnail Gen)
+// Version 2.22.22 (Fix currentCropData RefError in Preset Thumbs)
 
 const UnifiedImageEditor = (() => {
   'use strict';
@@ -43,6 +43,13 @@ const UnifiedImageEditor = (() => {
   let localTargetVariantToPreloadDetails = null;
   let localTargetVariantToPreloadTitle = null;
 
+  // Cache for frequently accessed jQuery objects
+  let $uieImage, $cropperViewBoxImage;
+  let $brightnessSlider, $contrastSlider, $saturationSlider, $hueSlider, $zoomSlider;
+
+  // Forward declaration for debounced function
+  let debouncedUpdateThumbnails = null; 
+
 
   const showNotification = (message, type) => {
     if (typeof Notifications !== 'undefined' && Notifications.show) {
@@ -65,14 +72,17 @@ const UnifiedImageEditor = (() => {
     };
   };
 
-  let debouncedUpdateThumbnails = null;
-
   const getCurrentUserAdjustedFiltersObject = () => {
+    if (!$brightnessSlider || !$brightnessSlider.length) $brightnessSlider = $('.uie-slider[data-filter="brightness"]');
+    if (!$contrastSlider || !$contrastSlider.length) $contrastSlider = $('.uie-slider[data-filter="contrast"]');
+    if (!$saturationSlider || !$saturationSlider.length) $saturationSlider = $('.uie-slider[data-filter="saturation"]');
+    if (!$hueSlider || !$hueSlider.length) $hueSlider = $('.uie-slider[data-filter="hue"]');
+    
     return {
-        brightness: parseFloat($('.uie-slider[data-filter="brightness"]').val()) || 100,
-        contrast:   parseFloat($('.uie-slider[data-filter="contrast"]').val()) || 100,
-        saturation: parseFloat($('.uie-slider[data-filter="saturation"]').val()) || 100,
-        hue:        parseFloat($('.uie-slider[data-filter="hue"]').val()) || 0,
+        brightness: parseFloat($brightnessSlider.val()) || 100,
+        contrast:   parseFloat($contrastSlider.val()) || 100,
+        saturation: parseFloat($saturationSlider.val()) || 100,
+        hue:        parseFloat($hueSlider.val()) || 0,
     };
   };
 
@@ -80,6 +90,26 @@ const UnifiedImageEditor = (() => {
     const f = filtersObject || getCurrentUserAdjustedFiltersObject(); 
     return `brightness(${f.brightness}%) contrast(${f.contrast}%) saturate(${f.saturation}%) hue-rotate(${f.hue}deg)`;
   };
+
+  const applyCssFiltersToImage = (filtersObject) => {
+    const filterString = getCssFilterString(filtersObject);
+
+    if (cropper && cropper.cropper) { 
+        if (!$cropperViewBoxImage || !$cropperViewBoxImage.length) { 
+            $cropperViewBoxImage = $(cropper.cropper).find('.cropper-view-box img');
+        }
+        if ($cropperViewBoxImage && $cropperViewBoxImage.length) {
+            $cropperViewBoxImage.css("filter", filterString);
+        } else {
+             if ($uieImage && $uieImage.length) {
+                $uieImage.css("filter", filterString);
+            }
+        }
+    } else if ($uieImage && $uieImage.length) {
+        $uieImage.css("filter", filterString);
+    }
+  };
+
 
   const generateScaledThumbnail = (sourceCanvas, maxWidth = 80, maxHeight = 80) => {
     const srcW = sourceCanvas.width;
@@ -225,7 +255,7 @@ const UnifiedImageEditor = (() => {
         );
         
         effectiveCropperSourceDimensions = { width: canvas.width, height: canvas.height };
-        console.log("Processed virtual master canvas. Dimensions:", canvas.width, "x", canvas.height, "Source crop used:", cropToUse);
+        // console.log("Processed virtual master canvas. Dimensions:", canvas.width, "x", canvas.height, "Source crop used:", cropToUse);
         resolve(canvas.toDataURL('image/png'));
     });
   };
@@ -234,6 +264,7 @@ const UnifiedImageEditor = (() => {
     if (cropper && cropper.ready) {
         try {
             const cropData = cropper.getData(true); 
+            // console.log("updateDisplayedDimensions - cropData:", cropData); 
             $('#uie-current-dims').text(`${Math.round(cropData.width)}px × ${Math.round(cropData.height)}px`);
         } catch (e) {
             console.warn("Could not get crop data for dimensions display:", e);
@@ -246,7 +277,7 @@ const UnifiedImageEditor = (() => {
 
   const updateAspectRatioLockButton = () => {
     const $btn = $('.uie-aspect-lock-btn');
-    if (isAspectRatioLocked && !isNaN(currentLockedAspectRatio)) {
+    if (isAspectRatioLocked && !isNaN(currentLockedAspectRatio) && currentLockedAspectRatio > 0) {
         $btn.find('i').removeClass('fa-unlock-alt').addClass('fa-lock');
         $btn.attr('data-locked', 'true').attr('title', `Aspect Ratio Locked (${currentLockedAspectRatio.toFixed(2)})`);
     } else {
@@ -322,7 +353,7 @@ const UnifiedImageEditor = (() => {
                       <label class="uie-slider-label"><span class="uie-slider-text">Contrast</span><span class="uie-slider-input-container"><input type="range" class="uie-slider" data-filter="contrast" min="0" max="200" value="100"></span><span class="uie-reset-icon-container" data-reset-for="contrast" title="Reset Contrast"><i class="fas fa-sync-alt uie-reset-icon"></i></span></label>
                       <label class="uie-slider-label"><span class="uie-slider-text">Saturation</span><span class="uie-slider-input-container"><input type="range" class="uie-slider" data-filter="saturation" min="0" max="200" value="100"></span><span class="uie-reset-icon-container" data-reset-for="saturation" title="Reset Saturation"><i class="fas fa-sync-alt uie-reset-icon"></i></span></label>
                       <label class="uie-slider-label"><span class="uie-slider-text">Hue</span><span class="uie-slider-input-container"><input type="range" class="uie-slider" data-filter="hue" min="0" max="360" value="0"></span><span class="uie-reset-icon-container" data-reset-for="hue" title="Reset Hue"><i class="fas fa-sync-alt uie-reset-icon"></i></span></label>
-                      <label class="uie-slider-label"><span class="uie-slider-text">Zoom</span><span class="uie-slider-input-container"><input type="range" class="uie-slider" data-cropper="zoom" min="0" max="200" value="0"></span><span class="uie-reset-icon-container" data-reset-for="zoom" title="Reset Zoom"><i class="fas fa-sync-alt uie-reset-icon"></i></span></label>
+                      <label class="uie-slider-label"><span class="uie-slider-text">Zoom</span><span class="uie-slider-input-container"><input type="range" class="uie-slider" data-cropper="zoom" min="0" max="300" value="0"></span><span class="uie-reset-icon-container" data-reset-for="zoom" title="Reset Zoom"><i class="fas fa-sync-alt uie-reset-icon"></i></span></label>
                     </div>
                     <div class="uie-reset-buttons-row">
                       <span class="uie-reset-btn" data-reset-for="crop" title="Reset Crop, Zoom & Filters"><i class="fas fa-undo"></i></span> 
@@ -367,6 +398,14 @@ const UnifiedImageEditor = (() => {
           </div>
         </div>`;
       $('body').append(editorHTML);
+      
+      $brightnessSlider = $('.uie-slider[data-filter="brightness"]');
+      $contrastSlider = $('.uie-slider[data-filter="contrast"]');
+      $saturationSlider = $('.uie-slider[data-filter="saturation"]');
+      $hueSlider = $('.uie-slider[data-filter="hue"]');
+      $zoomSlider = $('.uie-slider[data-cropper="zoom"]');
+      $uieImage = $('#uie-image');
+
       bindStaticEvents();
     }
   };
@@ -396,30 +435,38 @@ const UnifiedImageEditor = (() => {
   };
 
   const pollZoomSlider = () => {
-    if (!cropper || !cropper.ready) return;
+    if (!cropper || !cropper.ready) {
+        requestAnimationFrame(pollZoomSlider); 
+        return;
+    }
     try {
-        const currentImageData = cropper.getImageData(); 
-        if (!currentImageData || !effectiveCropperSourceDimensions.width || effectiveCropperSourceDimensions.width === 0 || initialZoomRatio === 0 ) return;
-        const currentZoomOfBaseImage = currentImageData.width / effectiveCropperSourceDimensions.width;
-        
-        let sliderValue = ((currentZoomOfBaseImage / initialZoomRatio) - 1) * 100;
+        const canvasData = cropper.getCanvasData(); 
 
-        const sliderMax = parseFloat($(".uie-slider[data-cropper='zoom']").attr("max"));
-        if (sliderValue < -99) sliderValue = -99; 
-        if (sliderValue > sliderMax) sliderValue = sliderMax;
+        if (!canvasData || !effectiveCropperSourceDimensions.width || effectiveCropperSourceDimensions.width === 0 || initialZoomRatio === 0 ) {
+             requestAnimationFrame(pollZoomSlider); return;
+        }
         
-        $(".uie-slider[data-cropper='zoom']").val(sliderValue);
+        const currentAbsoluteZoom = canvasData.width / effectiveCropperSourceDimensions.width;
+        // Slider value of 0 means currentAbsoluteZoom is equal to initialZoomRatio (initial fit)
+        let sliderValue = ((currentAbsoluteZoom / initialZoomRatio) - 1) * 100;
+        
+        const sliderMin = parseFloat($zoomSlider.attr("min")); // Should be 0
+        const sliderMax = parseFloat($zoomSlider.attr("max"));
+        sliderValue = Math.max(sliderMin, Math.min(sliderValue, sliderMax)); // Clamp to 0 and max
+        
+        if (Math.abs(parseFloat($zoomSlider.val()) - sliderValue) > 0.5) { 
+            $zoomSlider.val(sliderValue);
+        }
     } catch (e) {
-        // console.warn("PollZoomSlider: Cropper not fully ready or error:", e);
+        // console.warn("PollZoomSlider error:", e);
     }
     requestAnimationFrame(pollZoomSlider);
   };
 
   const loadMediaPresets = () => {
     return new Promise((resolve, reject) => {
-        $('.presets-loading').show();
-        $('.uie-filter-presets .uie-presets-scroll').empty().html($('.filter-presets-loading').show().clone()); 
-        $('.uie-crop-presets .uie-presets-scroll').empty().html($('.crop-presets-loading').show().clone());
+        $('.filter-presets-loading').show();
+        $('.crop-presets-loading').show();
 
         $.ajax({
             url: 'ajax/getMediaPresets.php',
@@ -432,7 +479,8 @@ const UnifiedImageEditor = (() => {
             },
             error: function(err) {
                 console.error("Error loading media presets:", err);
-                $('.presets-loading').hide();
+                $('.filter-presets-loading').hide();
+                $('.crop-presets-loading').hide();
                 $('.uie-filter-presets .uie-presets-scroll').html('<p>Error loading presets.</p>');
                 $('.uie-crop-presets .uie-presets-scroll').html('<p>Error loading presets.</p>');
                 reject(err);
@@ -440,101 +488,105 @@ const UnifiedImageEditor = (() => {
         });
     });
   };
-
-  // This function is defined before updatePresetThumbnails
+  
   const generatePresetThumbnail = (preset) => {
     return new Promise((resolve, reject) => {
-        if (!cropper || !cropper.ready) {
-            return reject("generatePresetThumbnail: Cropper not ready.");
-        }
-
-        let baseCanvasForPreset;
-        try {
-            baseCanvasForPreset = cropper.getCroppedCanvas();
-            if (!baseCanvasForPreset || baseCanvasForPreset.width === 0 || baseCanvasForPreset.height === 0) {
-                return reject("generatePresetThumbnail: Could not get valid base cropped canvas from main cropper.");
-            }
-        } catch (e) {
-            return reject("generatePresetThumbnail: Error getting base cropped canvas: " + e.message);
-        }
-
-        const currentlyFilteredBaseCanvas = document.createElement('canvas');
-        currentlyFilteredBaseCanvas.width = baseCanvasForPreset.width;
-        currentlyFilteredBaseCanvas.height = baseCanvasForPreset.height;
-        const cfbcCtx = currentlyFilteredBaseCanvas.getContext('2d');
-        
-        const currentSliderFilters = getCurrentUserAdjustedFiltersObject();
-        cfbcCtx.filter = getCssFilterString(currentSliderFilters);
-        cfbcCtx.drawImage(baseCanvasForPreset, 0, 0);
-
-        let finalPreviewCanvas = document.createElement('canvas');
-        let finalCtx = finalPreviewCanvas.getContext('2d');
-
-        if (preset.type === 'filter') {
-            try {
-                const presetFilterDetails = JSON.parse(preset.preset_details);
-                const presetFilterValues = {
-                    brightness: presetFilterDetails.brightness || 100,
-                    contrast: presetFilterDetails.contrast || 100,
-                    saturation: presetFilterDetails.saturation || 100,
-                    hue: presetFilterDetails.hue || 0
-                };
-                finalPreviewCanvas.width = currentlyFilteredBaseCanvas.width;
-                finalPreviewCanvas.height = currentlyFilteredBaseCanvas.height;
-                finalCtx.filter = getCssFilterString(presetFilterValues);
-                finalCtx.drawImage(currentlyFilteredBaseCanvas, 0, 0);
-            } catch (err) {
-                console.error("Error processing filter preset details for '" + preset.name + "':", err, preset.preset_details);
-                return reject(err);
-            }
-        } else if (preset.type === 'crop') {
-            try {
-                const presetCropDetails = JSON.parse(preset.preset_details);
-                const aspectRatioStr = presetCropDetails.aspect_ratio;
-                const parts = aspectRatioStr.split(':');
-                if (parts.length !== 2) return reject("Malformed aspect ratio string in preset.");
-                
-                const targetRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
-                if (isNaN(targetRatio) || targetRatio <= 0) return reject("Invalid aspect ratio in preset.");
-
-                const sourceW = currentlyFilteredBaseCanvas.width;
-                const sourceH = currentlyFilteredBaseCanvas.height;
-                let newCropW, newCropH, cropX, cropY;
-
-                if (sourceW / sourceH > targetRatio) {
-                    newCropH = sourceH;
-                    newCropW = newCropH * targetRatio;
-                    cropX = (sourceW - newCropW) / 2;
-                    cropY = 0;
-                } else {
-                    newCropW = sourceW;
-                    newCropH = newCropW / targetRatio;
-                    cropX = 0;
-                    cropY = (sourceH - newCropH) / 2;
-                }
-                finalPreviewCanvas.width = Math.round(newCropW);
-                finalPreviewCanvas.height = Math.round(newCropH);
-                finalCtx.drawImage(currentlyFilteredBaseCanvas, 
-                                   cropX, cropY, newCropW, newCropH,
-                                   0, 0, finalPreviewCanvas.width, finalPreviewCanvas.height);
-            } catch (err) {
-                console.error("Error processing crop preset details for '" + preset.name + "':", err, preset.preset_details);
-                return reject(err);
-            }
-        } else {
-            return reject("Unknown preset type: " + preset.type);
+        if (!cropper || !cropper.ready || !activeBaseImageElement || !activeBaseImageElement.complete || activeBaseImageElement.naturalWidth === 0) {
+            return reject("generatePresetThumbnail: Cropper or base image not ready.");
         }
         
-        const thumbCanvas = generateScaledThumbnail(finalPreviewCanvas);
-        resolve(thumbCanvas.toDataURL());
+        let baseForThumbnailCanvas = document.createElement('canvas');
+        let baseForThumbnailCtx = baseForThumbnailCanvas.getContext('2d');
+        
+        const currentCropDataFromEditor = cropper.getData(true); 
+
+        baseForThumbnailCanvas.width = Math.round(currentCropDataFromEditor.width);
+        baseForThumbnailCanvas.height = Math.round(currentCropDataFromEditor.height);
+
+        if (baseForThumbnailCanvas.width === 0 || baseForThumbnailCanvas.height === 0) {
+             console.warn("generatePresetThumbnail: currentCropDataFromEditor has zero dimensions. Using fallback for preset base.");
+             const fallbackCanvas = document.createElement('canvas');
+             fallbackCanvas.width = 80; fallbackCanvas.height = 80; 
+             const fbCtx = fallbackCanvas.getContext('2d');
+             fbCtx.fillStyle = '#ddd'; fbCtx.fillRect(0,0,80,80);
+             processPresetApplication(preset, fallbackCanvas, resolve, reject); 
+             return; 
+        }
+        
+        const tempEffectiveImgForPresetBase = new Image();
+        tempEffectiveImgForPresetBase.onload = () => {
+            baseForThumbnailCtx.drawImage(
+                tempEffectiveImgForPresetBase,
+                currentCropDataFromEditor.x, 
+                currentCropDataFromEditor.y, 
+                currentCropDataFromEditor.width, 
+                currentCropDataFromEditor.height,
+                0,0, baseForThumbnailCanvas.width, baseForThumbnailCanvas.height
+            );
+            processPresetApplication(preset, baseForThumbnailCanvas, resolve, reject);
+        };
+        tempEffectiveImgForPresetBase.onerror = () => reject("Failed to load effectiveCropperSource for preset thumbnailing (base).");
+        tempEffectiveImgForPresetBase.src = effectiveCropperSource;
+
     });
+  };
+
+  // Helper for generatePresetThumbnail to apply preset-specific logic
+  const processPresetApplication = (preset, sourceCanvasForPreset, resolve, reject) => {
+      let finalPreviewCanvas = document.createElement('canvas');
+      let finalCtx = finalPreviewCanvas.getContext('2d');
+
+      if (preset.type === 'filter') {
+          try {
+              const presetFilterDetails = JSON.parse(preset.preset_details);
+              finalPreviewCanvas.width = sourceCanvasForPreset.width;
+              finalPreviewCanvas.height = sourceCanvasForPreset.height;
+              finalCtx.filter = getCssFilterString(presetFilterDetails); // Apply ONLY preset's filters
+              finalCtx.drawImage(sourceCanvasForPreset, 0, 0); // Draw the "clean" crop
+          } catch (err) { console.error("Error in filter preset processing for thumb:", preset.name, err); return reject(err); }
+      } else if (preset.type === 'crop') {
+          try {
+              // For crop presets, the base for the crop operation is the current visual state
+              // (including slider filters) from the main cropper.
+              const currentCropperViewCanvas = cropper.getCroppedCanvas();
+              if (!currentCropperViewCanvas || currentCropperViewCanvas.width === 0 || currentCropperViewCanvas.height === 0) {
+                  return reject("generatePresetThumbnail (crop): Could not get valid current view from cropper.");
+              }
+              
+              const visuallyFilteredCropperView = document.createElement('canvas');
+              visuallyFilteredCropperView.width = currentCropperViewCanvas.width;
+              visuallyFilteredCropperView.height = currentCropperViewCanvas.height;
+              const vfcvCtx = visuallyFilteredCropperView.getContext('2d');
+              vfcvCtx.filter = getCssFilterString(getCurrentUserAdjustedFiltersObject()); // Apply current slider filters
+              vfcvCtx.drawImage(currentCropperViewCanvas, 0, 0);
+
+              const presetCropDetails = JSON.parse(preset.preset_details);
+              const parts = presetCropDetails.aspect_ratio.split(':');
+              const targetRatio = parseFloat(parts[0]) / parseFloat(parts[1]);
+
+              const sourceW = visuallyFilteredCropperView.width;
+              const sourceH = visuallyFilteredCropperView.height;
+              let newCropW, newCropH, cropX, cropY;
+              if (sourceW / sourceH > targetRatio) {
+                  newCropH = sourceH; newCropW = newCropH * targetRatio;
+                  cropX = (sourceW - newCropW) / 2; cropY = 0;
+              } else {
+                  newCropW = sourceW; newCropH = newCropW / targetRatio;
+                  cropX = 0; cropY = (sourceH - newCropH) / 2;
+              }
+              finalPreviewCanvas.width = Math.round(newCropW);
+              finalPreviewCanvas.height = Math.round(newCropH);
+              finalCtx.drawImage(visuallyFilteredCropperView, cropX, cropY, newCropW, newCropH, 0, 0, finalPreviewCanvas.width, finalPreviewCanvas.height);
+          } catch (err) { console.error("Error in crop preset processing for thumb:", preset.name, err); return reject(err); }
+      } else { return reject("Unknown preset type for thumbnail: " + preset.type); }
+      
+      const thumbCanvas = generateScaledThumbnail(finalPreviewCanvas);
+      resolve(thumbCanvas.toDataURL());
   };
 
 
   const updatePresetThumbnails = () => {
-    // Helper to ensure closure captures the correct generatePresetThumbnail
-    // This is a defensive measure.
-    const callGeneratePresetThumbnail = (preset) => {
+    const callGeneratePresetThumbnail = (preset) => { 
         if (typeof generatePresetThumbnail !== 'function') {
             console.error("!!! updatePresetThumbnails -> callGeneratePresetThumbnail: generatePresetThumbnail is NOT a function when invoked for preset:", preset ? preset.name : 'N/A');
             return Promise.resolve(`<div id="preset_${preset ? preset.id : 'error'}" class="uie-preset-box uie-box" data-preset-id="${preset ? preset.id : 'error'}" title="Generator Function Error"><div class="image-container" style="background:#800; color:white; display:flex; align-items:center; justify-content:center; font-size:0.7em; text-align:center;">Fn Err</div><span class="uie-preset-caption uie-box-caption">${preset ? preset.name : 'Error'}</span></div>`);
@@ -545,24 +597,25 @@ const UnifiedImageEditor = (() => {
     return new Promise((resolve, reject) => {
         if (!cropper || !cropper.ready) {
             console.warn("updatePresetThumbnails: Cropper not ready.");
-            $('.presets-loading').hide();
+            $('.filter-presets-loading').hide();
+            $('.crop-presets-loading').hide();
             return reject(new Error("Cropper not ready for preset thumbnails."));
         }
         if (!presetsData || presetsData.length === 0) {
             console.log("updatePresetThumbnails: No presets data to render.");
-            $('.presets-loading').hide();
+            $('.filter-presets-loading').hide();
+            $('.crop-presets-loading').hide();
             $('.uie-filter-presets .uie-presets-scroll').empty();
             $('.uie-crop-presets .uie-presets-scroll').empty();
             return resolve();
         }
 
-        console.log("updatePresetThumbnails: Starting generation for", presetsData.length, "presets.");
-        $('.uie-filter-presets .uie-presets-scroll').empty(); 
-        $('.uie-crop-presets .uie-presets-scroll').empty();
-        $('.presets-loading').show();
-
+        // console.log("updatePresetThumbnails: Starting generation for", presetsData.length, "presets.");
+        $('.filter-presets-loading').show();
+        $('.crop-presets-loading').show();
+        
         const thumbnailPromises = presetsData.map(preset =>
-            callGeneratePresetThumbnail(preset) // Use the helper
+            callGeneratePresetThumbnail(preset) 
                 .catch(err => {
                     console.error("Error generating thumbnail for preset (in map's catch):", preset.name, err);
                     return `<div id="preset_${preset.id}" class="uie-preset-box uie-box" data-preset-id="${preset.id}" title="Error loading preview">
@@ -574,6 +627,9 @@ const UnifiedImageEditor = (() => {
 
         Promise.all(thumbnailPromises)
             .then(generatedHtmlOrDataUrls => {
+                $('.uie-filter-presets .uie-presets-scroll').empty(); 
+                $('.uie-crop-presets .uie-presets-scroll').empty();
+
                 generatedHtmlOrDataUrls.forEach((result, index) => {
                     const preset = presetsData[index];
                     let presetBoxHtml;
@@ -592,15 +648,18 @@ const UnifiedImageEditor = (() => {
                       $('.uie-crop-presets .uie-presets-scroll').append(presetBoxHtml);
                     }
                 });
-                console.log("updatePresetThumbnails: All preset thumbnails processed.");
+                // console.log("updatePresetThumbnails: All preset thumbnails processed.");
                 resolve(); 
             })
             .catch(overallError => {
                 console.error("updatePresetThumbnails: Overall error processing preset thumbnails:", overallError);
+                $('.uie-filter-presets .uie-presets-scroll').empty().html('<p>Error rendering presets.</p>');
+                $('.uie-crop-presets .uie-presets-scroll').empty().html('<p>Error rendering presets.</p>');
                 reject(overallError); 
             })
             .finally(() => {
-                $('.presets-loading').hide();
+                $('.filter-presets-loading').hide();
+                $('.crop-presets-loading').hide();
             });
     });
   };
@@ -629,11 +688,13 @@ const UnifiedImageEditor = (() => {
     });
   };
 
+  // Assign debouncedUpdateThumbnails *after* updatePresetThumbnails is defined.
   debouncedUpdateThumbnails = debounce(() => {
     if (!cropper || !cropper.ready) return;
-    console.log("Debounced call to updatePresetThumbnails triggered.");
+    // console.log("Debounced call to updatePresetThumbnails triggered by crop/zoom/filter change.");
     updatePresetThumbnails();
-  }, 500); 
+  }, 350); 
+
 
   const bindPresetEvents = () => {
     $(document).off('click.uiePreset').on('click.uiePreset', '.uie-preset-box', function() {
@@ -656,10 +717,25 @@ const UnifiedImageEditor = (() => {
         }
 
         if (presetType === 'filter') {
-            if (presetDetails.brightness !== undefined) $('.uie-slider[data-filter="brightness"]').val(presetDetails.brightness).trigger('input').trigger('change');
-            if (presetDetails.contrast !== undefined) $('.uie-slider[data-filter="contrast"]').val(presetDetails.contrast).trigger('input').trigger('change');
-            if (presetDetails.saturation !== undefined) $('.uie-slider[data-filter="saturation"]').val(presetDetails.saturation).trigger('input').trigger('change');
-            if (presetDetails.hue !== undefined) $('.uie-slider[data-filter="hue"]').val(presetDetails.hue).trigger('input').trigger('change');
+            // Reset all sliders to default BEFORE applying preset values
+            $brightnessSlider.val(100);
+            $contrastSlider.val(100);
+            $saturationSlider.val(100);
+            $hueSlider.val(0);
+
+            // Apply preset values
+            if (presetDetails.brightness !== undefined) $brightnessSlider.val(presetDetails.brightness);
+            if (presetDetails.contrast !== undefined) $contrastSlider.val(presetDetails.contrast);
+            if (presetDetails.saturation !== undefined) $saturationSlider.val(presetDetails.saturation);
+            if (presetDetails.hue !== undefined) $hueSlider.val(presetDetails.hue);
+            
+            // Trigger input on all filter sliders to apply changes and update CSS
+            // Then trigger change on one to update thumbnails
+            $brightnessSlider.trigger('input');
+            $contrastSlider.trigger('input');
+            $saturationSlider.trigger('input');
+            $hueSlider.trigger('input').trigger('change'); // Last one triggers change for debouncedUpdateThumbnails
+
         } else if (presetType === 'crop') {
             if (presetDetails.aspect_ratio) {
                 const parts = presetDetails.aspect_ratio.split(':');
@@ -682,9 +758,11 @@ const UnifiedImageEditor = (() => {
                             width: newCropBoxWidth,
                             height: newCropBoxHeight
                         });
-                        isAspectRatioLocked = true;
+                        isAspectRatioLocked = true; 
                         currentLockedAspectRatio = newAspectRatio;
                         updateAspectRatioLockButton();
+                        // updateDisplayedDimensions(); // Called by cropper.setCropBoxData via 'crop' event
+                        // debouncedUpdateThumbnails(); // Called by cropper.setCropBoxData via 'crop' event
                     } else {
                          showNotification("Invalid aspect ratio in preset.", "error");
                     }
@@ -706,11 +784,17 @@ const UnifiedImageEditor = (() => {
     effectiveCropperSource = imageSrcForCropper; 
 
     if (cropper) {
-        try { cropper.destroy(); } catch (e) { console.warn("Error destroying previous cropper instance:", e); }
+        try { 
+            if (cropper.cropper) { 
+                 cropper.cropper.removeEventListener('zoom', debouncedUpdateThumbnails);
+            }
+            cropper.destroy(); 
+        } catch (e) { console.warn("Error destroying previous cropper instance:", e); }
         cropper = null;
     }
     
     $(imageElementForCropperDOM).attr('src', imageSrcForCropper);
+    $uieImage = $('#uie-image'); 
 
     const tempImg = new Image();
     tempImg.onload = () => {
@@ -729,10 +813,10 @@ const UnifiedImageEditor = (() => {
             cropBoxResizable: true, responsive: true, guides: false,
             zoomOnWheel: true, wheelZoomRatio: 0.1,
             minCropBoxWidth: 10, minCropBoxHeight: 10,
-            crop: function(event) {
+            crop: function(event) { 
                 if (event.detail.originalEvent) { 
-                    debouncedUpdateThumbnails(); 
                     updateDisplayedDimensions(); 
+                    if (debouncedUpdateThumbnails) debouncedUpdateThumbnails(); 
                 }
             }
         };
@@ -744,6 +828,15 @@ const UnifiedImageEditor = (() => {
             }
             console.log("Cropper ready. Effective source dimensions:", effectiveCropperSourceDimensions);
             
+            $cropperViewBoxImage = $(cropper.cropper).find('.cropper-view-box img');
+            if (!$cropperViewBoxImage.length) {
+                console.warn("Cropper ready, but .cropper-view-box img not found immediately. Filters might not apply correctly at first.");
+            }
+            if (cropper.cropper) { 
+                cropper.cropper.addEventListener('zoom', debouncedUpdateThumbnails);
+            }
+
+
             const container = cropper.getContainerData();
             const imageW = effectiveCropperSourceDimensions.width;
             const imageH = effectiveCropperSourceDimensions.height;
@@ -774,12 +867,12 @@ const UnifiedImageEditor = (() => {
                                  initialSettings.filters : 
                                  { brightness: 100, contrast: 100, saturation: 100, hue: 0 };
 
-            $('.uie-slider[data-filter="brightness"]').val(filtersForUI.brightness);
-            $('.uie-slider[data-filter="contrast"]').val(filtersForUI.contrast);
-            $('.uie-slider[data-filter="saturation"]').val(filtersForUI.saturation);
-            $('.uie-slider[data-filter="hue"]').val(filtersForUI.hue);
+            $brightnessSlider.val(filtersForUI.brightness);
+            $contrastSlider.val(filtersForUI.contrast);
+            $saturationSlider.val(filtersForUI.saturation);
+            $hueSlider.val(filtersForUI.hue);
             
-            $('#uie-image, .cropper-view-box img').css("filter", getCssFilterString(filtersForUI));
+            applyCssFiltersToImage(filtersForUI);
             
             if (initialSettings && initialSettings.crop) {
                 console.log("Applying initialSettings (crop & implied zoom/pan):", initialSettings.crop);
@@ -803,56 +896,42 @@ const UnifiedImageEditor = (() => {
                         width: canvasForInitialCropBox.width,
                         height: canvasForInitialCropBox.height
                     });
-                    console.log("Ready: Initial visual crop box set to canvas dimensions:", cropper.getCropBoxData());
+                    // console.log("Ready: Initial visual crop box set to canvas dimensions:", cropper.getCropBoxData());
                 } else {
                     console.error("Ready: Canvas for initial crop box has zero dimensions.");
                 }
             }
             
-            const currentImageData = cropper.getImageData();
-            if (currentImageData.naturalWidth > 0 && initialZoomRatio > 0 ) { 
-                const actualCurrentZoom = currentImageData.width / currentImageData.naturalWidth;
-                let sliderVal = ((actualCurrentZoom / initialZoomRatio) - 1) * 100;
-                
-                const sliderMax = parseFloat($(".uie-slider[data-cropper='zoom']").attr("max"));
-                if (sliderVal < -99) sliderVal = -99; 
-                if (sliderVal > sliderMax) sliderVal = sliderMax;
-                $('.uie-slider[data-cropper="zoom"]').val(sliderVal);
-            } else {
-                 $('.uie-slider[data-cropper="zoom"]').val(0);
-            }
+            // Set zoom slider to 0 for initial fit state
+            $zoomSlider.val(0); 
 
             isAspectRatioLocked = false;
             currentLockedAspectRatio = NaN;
             updateAspectRatioLockButton();
             
-            updateDisplayedDimensions(); 
+            updateDisplayedDimensions(); // Initial dimension display
             requestAnimationFrame(pollZoomSlider);
             
-            // --- Deferred loading for thumbnails ---
             setTimeout(async () => {
-                if (!cropper || !cropper.ready) return; // Re-check cropper
+                if (!cropper || !cropper.ready) return; 
                 console.log("Deferred: Starting to load presets and variants thumbnails.");
                 
-                // Load Presets and then update their thumbnails
                 try {
-                    await loadMediaPresets(); // Fetches data
+                    await loadMediaPresets(); 
                     if (presetsData.length > 0) {
-                        await updatePresetThumbnails(); // Renders thumbnails
+                        await updatePresetThumbnails(); 
                     } else {
-                         $('.presets-loading').hide(); // Hide if no presets
+                         $('.presets-loading').hide(); 
                     }
                 } catch (presetError) {
                     console.error("Deferred: Error in preset loading/rendering chain:", presetError);
                      $('.presets-loading').hide();
                 }
 
-                // Load Variants and their thumbnails
                 if (mergedOptions.refreshVariants || !variantsInitiallyLoadedForMaster) {
                     console.log("Deferred: Calling loadAndDisplayVariants. isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
-                    loadAndDisplayVariants(currentMediaAssetId); // This will handle its own loading indicator
+                    loadAndDisplayVariants(currentMediaAssetId); 
                 } else {
-                    // If not refreshing, ensure correct highlighting based on current state
                     console.log("Deferred: Skipped refetching variants. Highlighting based on: isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
                     if (!isEditingMaster && currentVariantId) {
                         $('.uie-variant-box').removeClass('active-variant'); 
@@ -864,14 +943,13 @@ const UnifiedImageEditor = (() => {
                         $('#uie-source-thumbnail-box').addClass('active-variant');
                         $('.uie-source-label').hide().empty();
                     }
-                    $('.variants-loading').hide(); // Hide if not refreshing
+                    $('.variants-loading').hide(); 
                 }
                 
                 bindPresetEvents(); 
-                updateActionButtons(); // Ensure buttons are correct after all async ops
+                updateActionButtons(); 
                 
             }, 0);
-            // --- End Deferred loading ---
 
 
             localTargetVariantToPreloadId = null;
@@ -948,7 +1026,7 @@ const UnifiedImageEditor = (() => {
 
   const openEditor = async (physicalImgUrl, assetDataObj, saveCb, closedCb, options = {}) => {
     console.log("openEditor called. Master Asset ID:", assetDataObj.id, "Options:", options);
-    ensureOverlayExists();
+    ensureOverlayExists(); // This now also caches some selectors
 
     cachedVariantsForCurrentMaster = [];
     variantsInitiallyLoadedForMaster = false;
@@ -1002,7 +1080,7 @@ const UnifiedImageEditor = (() => {
 
     $('#uie-source-thumbnail-box .uie-box-img').attr('src', '').attr('alt', 'Loading source preview...');
     $('#uie-source-thumbnail-box .uie-box-caption').text(currentMediaAssetAdminTitle); 
-    $('.uie-variant-scroll').empty().html('<div class="uie-loading-indicator variants-loading"><i class="fas fa-spinner fa-spin"></i> Loading Variants...</div>'); // Show loader immediately
+    $('.uie-variant-scroll').empty().html('<div class="uie-loading-indicator variants-loading"><i class="fas fa-spinner fa-spin"></i> Loading Variants...</div>'); 
     
     $('#uie-source-url-input').val(currentMasterSourceUrl);
     $('#uie-attribution-input').val(currentMasterAttribution);
@@ -1029,10 +1107,10 @@ const UnifiedImageEditor = (() => {
         }
         
         try {
-            console.log("UIE Source Thumb: Generating for master. Base image natural dims:", activeBaseImageElement.naturalWidth, "x", activeBaseImageElement.naturalHeight);
+            // console.log("UIE Source Thumb: Generating for master. Base image natural dims:", activeBaseImageElement.naturalWidth, "x", activeBaseImageElement.naturalHeight);
             const masterPreviewCanvas = await generateTransformedPreviewCanvas(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters, null, null);
             if (masterPreviewCanvas.width === 0 || masterPreviewCanvas.height === 0) {
-                console.warn("UIE Source Thumb: masterPreviewCanvas has zero dimensions. Thumbnail will be empty/error.");
+                // console.warn("UIE Source Thumb: masterPreviewCanvas has zero dimensions. Thumbnail will be empty/error.");
                  $('#uie-source-thumbnail-box .uie-box-img').attr('src','').attr('alt', 'Preview Error (Zero Dim)');
             } else {
                 const scaledThumbCanvas = generateScaledThumbnail(masterPreviewCanvas, 85, 70); 
@@ -1046,10 +1124,9 @@ const UnifiedImageEditor = (() => {
         let imageSrcToLoadInCropper;
         let initialSettingsForCropper = null;
 
-        // This logic determines the initial state of the editor (master vs. variant)
         if (localTargetVariantToPreloadId && localTargetVariantToPreloadDetails) {
             console.log("openEditor (preload path): Setting state for variant:", localTargetVariantToPreloadId);
-            isEditingMaster = false; // CRITICAL: Set state before initializing cropper
+            isEditingMaster = false; 
             currentVariantId = localTargetVariantToPreloadId;
 
             if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) {
@@ -1067,7 +1144,7 @@ const UnifiedImageEditor = (() => {
             $('.uie-alt-text').val(localTargetVariantToPreloadDetails.altText || '');
         } else { 
             console.log("openEditor (master path): Setting state for master:", currentMediaAssetId);
-            isEditingMaster = true; // CRITICAL: Set state
+            isEditingMaster = true; 
             currentVariantId = null;
             if (!isCurrentMasterPhysical && (currentAssetDefaultCrop || currentAssetDefaultFilters)) {
                 imageSrcToLoadInCropper = await getProcessedVirtualMasterCanvasDataUrl(activeBaseImageElement, currentAssetDefaultCrop, currentAssetDefaultFilters);
@@ -1081,8 +1158,6 @@ const UnifiedImageEditor = (() => {
         }
         
         $('#uie-overlay').removeClass('hidden').fadeIn(300, () => {
-            // Pass refreshVariants: true so variants are always loaded on open,
-            // this allows highlighting logic in loadAndDisplayVariants to work correctly.
             initializeCropperInstance(imageSrcToLoadInCropper, initialSettingsForCropper, { refreshVariants: true }); 
         });
     };
@@ -1091,7 +1166,7 @@ const UnifiedImageEditor = (() => {
         showNotification("Error: Could not load the main image. Editor cannot open.", "error");
         activeBaseImageElement = null;
         $('#uie-source-thumbnail-box .uie-box-img').attr('src','').attr('alt', 'Load Error');
-        $('.variants-loading').hide(); // Hide loader on error too
+        $('.variants-loading').hide(); 
         if (typeof onEditorClosedCallback === 'function') onEditorClosedCallback();
     };
     imagePreloader.src = currentMediaAssetUrl; 
@@ -1099,7 +1174,12 @@ const UnifiedImageEditor = (() => {
 
   const closeEditor = () => {
     if (cropper) {
-        try { cropper.destroy(); } catch(e) { console.warn("Error destroying cropper on close:", e); }
+        try { 
+            if (cropper.cropper) { 
+                 cropper.cropper.removeEventListener('zoom', debouncedUpdateThumbnails);
+            }
+            cropper.destroy(); 
+        } catch(e) { console.warn("Error destroying cropper on close:", e); }
         cropper = null;
     }
     activeBaseImageElement = null;
@@ -1173,9 +1253,8 @@ const UnifiedImageEditor = (() => {
 
   const loadAndDisplayVariants = (mediaAssetIdToLoad) => {
     console.log("loadAndDisplayVariants: Entered. isEditingMaster=", isEditingMaster, "currentVariantId=", currentVariantId);
-     // Show loading indicator for variants when this function starts
     $('.variants-loading').show();
-    $('.uie-variant-scroll').empty().append($('.variants-loading'));
+    $('.uie-variant-scroll').empty().append($('.variants-loading').show()); 
 
 
     if (!mediaAssetIdToLoad) {
@@ -1196,7 +1275,7 @@ const UnifiedImageEditor = (() => {
       data: { media_asset_id: mediaAssetIdToLoad }, 
       dataType: 'json',
       success: function(response) {
-        $('.uie-variant-scroll').empty(); // Clear loader before adding content
+        $('.uie-variant-scroll').empty(); 
         cachedVariantsForCurrentMaster = []; 
 
         if (response.success && response.variants && response.variants.length > 0) {
@@ -1259,11 +1338,11 @@ const UnifiedImageEditor = (() => {
           $('.uie-variant-scroll').append(`<p>Error loading variants: ${response.error || 'Unknown server error'}</p>`);
         }
         variantsInitiallyLoadedForMaster = true; 
-        $('.variants-loading').hide(); // Hide loader on success
+        $('.variants-loading').hide(); 
       },
       error: function(jqXHR, textStatus, errorThrown) {
         $('.uie-variant-scroll').empty().append('<p>AJAX error loading variants.</p>');
-        $('.variants-loading').hide(); // Hide loader on error
+        $('.variants-loading').hide(); 
         variantsInitiallyLoadedForMaster = true; 
       }
     });
@@ -1376,18 +1455,18 @@ const UnifiedImageEditor = (() => {
             case "zoom": 
                 if (cropper && cropper.ready) {
                     cropper.zoomTo(initialZoomRatio); 
-                    $(".uie-slider[data-cropper='zoom']").val(0); 
+                    $zoomSlider.val(0); // Reset slider to 0 for initial fit
                 }
                 break;
-            case "brightness": $('.uie-slider[data-filter="brightness"]').val(100).trigger('input').trigger('change'); break;
-            case "contrast":   $('.uie-slider[data-filter="contrast"]').val(100).trigger('input').trigger('change'); break;
-            case "saturation": $('.uie-slider[data-filter="saturation"]').val(100).trigger('input').trigger('change'); break;
-            case "hue":        $('.uie-slider[data-filter="hue"]').val(0).trigger('input').trigger('change'); break;
+            case "brightness": $brightnessSlider.val(100).trigger('input').trigger('change'); break;
+            case "contrast":   $contrastSlider.val(100).trigger('input').trigger('change'); break;
+            case "saturation": $saturationSlider.val(100).trigger('input').trigger('change'); break;
+            case "hue":        $hueSlider.val(0).trigger('input').trigger('change'); break;
             
             case "crop": 
             case "cropzoom": 
                 if (cropper && cropper.ready) {
-                    console.log("--- CROP/ZOOM RESET START ---");
+                    // console.log("--- CROP/ZOOM RESET START ---");
                     cropper.reset();
                     if (effectiveCropperSourceDimensions.width > 0 && effectiveCropperSourceDimensions.height > 0) {
                         cropper.setData({
@@ -1409,7 +1488,7 @@ const UnifiedImageEditor = (() => {
                         width: canvasDataAfterZoom.width,
                         height: canvasDataAfterZoom.height
                     });
-                    setTimeout(() => {
+                    setTimeout(() => { // Allow Cropper to settle visuals
                         if (!cropper || !cropper.ready) return;
                         const finalCanvasDataForCropBox = cropper.getCanvasData(); 
                         if (finalCanvasDataForCropBox.width > 0 && finalCanvasDataForCropBox.height > 0) {
@@ -1420,42 +1499,103 @@ const UnifiedImageEditor = (() => {
                                 height: finalCanvasDataForCropBox.height
                             });
                         }
-                        updateDisplayedDimensions();
+                        updateDisplayedDimensions(); // Update dimensions after full reset
                     }, 10); 
-                    $('.uie-slider[data-cropper="zoom"]').val(0); 
+                    $zoomSlider.val(0); // Reset zoom slider to 0
                     isAspectRatioLocked = false; currentLockedAspectRatio = NaN;
                     updateAspectRatioLockButton();
                     if(cropper.ready) cropper.setAspectRatio(NaN); 
-                    if (resetTarget === "crop") { 
-                        $('.uie-slider[data-filter="brightness"]').val(100).trigger('input').trigger('change');
-                        $('.uie-slider[data-filter="contrast"]').val(100).trigger('input').trigger('change');
-                        $('.uie-slider[data-filter="saturation"]').val(100).trigger('input').trigger('change');
-                        $('.uie-slider[data-filter="hue"]').val(0).trigger('input').trigger('change');
+                    if (resetTarget === "crop") { // "Reset All"
+                        $brightnessSlider.val(100).trigger('input').trigger('change');
+                        $contrastSlider.val(100).trigger('input').trigger('change');
+                        $saturationSlider.val(100).trigger('input').trigger('change');
+                        $hueSlider.val(0).trigger('input').trigger('change');
                         showNotification("Crop & Filters reset.", "info");
-                    } else {
+                    } else { // "Reset Crop/Zoom"
                         showNotification("Crop & Zoom reset.", "info");
                     }
-                    console.log("--- CROP/ZOOM RESET END ---");
+                    // console.log("--- CROP/ZOOM RESET END ---");
                 }
                 break;
             case "position":
-                 if (cropper && cropper.ready) { /* ... center logic ... */ }
+                 if (cropper && cropper.ready) { 
+                    const cd = cropper.getContainerData();
+                    const canvasD = cropper.getCanvasData(); 
+                    if(cd && canvasD ) {
+                        cropper.setCanvasData({
+                            left: (cd.width - canvasD.width) / 2,
+                            top: (cd.height - canvasD.height) / 2
+                        });
+                    }
+                 }
                 break;
             case "filters": 
-                $('.uie-slider[data-filter="brightness"]').val(100).trigger('input').trigger('change');
-                $('.uie-slider[data-filter="contrast"]').val(100).trigger('input').trigger('change');
-                $('.uie-slider[data-filter="saturation"]').val(100).trigger('input').trigger('change');
-                $('.uie-slider[data-filter="hue"]').val(0).trigger('input').trigger('change');
+                $brightnessSlider.val(100).trigger('input').trigger('change');
+                $contrastSlider.val(100).trigger('input').trigger('change');
+                $saturationSlider.val(100).trigger('input').trigger('change');
+                $hueSlider.val(0).trigger('input').trigger('change');
                 showNotification("Filters cleared.", "info");
                 break;
         }
     });
 
-    $(document).off('click.uieAspectLock').on('click.uieAspectLock', '.uie-aspect-lock-btn', function() { /* ... existing aspect lock logic ... */ });
-    $('.uie-slider[data-filter]').off('input.filter change.filter').on('input.filter', function() { /* ... existing filter slider logic ... */ })
-                                 .on('change.filter', function() { debouncedUpdateThumbnails(); });
-    $('.uie-slider[data-cropper="zoom"]').off('input.zoom change.zoom').on('input.zoom', function() { /* ... existing zoom slider logic ... */ })
-                                     .on('change.zoom', function() { debouncedUpdateThumbnails(); });
+    $(document).off('click.uieAspectLock').on('click.uieAspectLock', '.uie-aspect-lock-btn', function() {
+        if (!cropper || !cropper.ready) return;
+        isAspectRatioLocked = !isAspectRatioLocked;
+        if (isAspectRatioLocked) {
+            const cropBoxData = cropper.getCropBoxData();
+            if (cropBoxData.width > 0 && cropBoxData.height > 0) {
+                currentLockedAspectRatio = cropBoxData.width / cropBoxData.height;
+            } else { 
+                // Fallback to image's natural aspect ratio if crop box isn't defined
+                const imgData = cropper.getImageData();
+                if (imgData.naturalWidth > 0 && imgData.naturalHeight > 0) {
+                    currentLockedAspectRatio = imgData.naturalWidth / imgData.naturalHeight;
+                } else { // Absolute fallback if natural dimensions are also zero
+                    currentLockedAspectRatio = NaN; 
+                }
+            }
+            if (!isNaN(currentLockedAspectRatio) && currentLockedAspectRatio > 0) {
+                 cropper.setAspectRatio(currentLockedAspectRatio);
+            } else {
+                isAspectRatioLocked = false; // Failed to get a valid ratio
+                cropper.setAspectRatio(NaN); // Ensure cropper is unlocked
+            }
+        } else {
+            currentLockedAspectRatio = NaN;
+            cropper.setAspectRatio(NaN);
+        }
+        updateAspectRatioLockButton();
+    });
+
+    $('.uie-slider[data-filter]').off('input.filter change.filter').on('input.filter', function() { 
+        if (cropper && cropper.ready) {
+            applyCssFiltersToImage(getCurrentUserAdjustedFiltersObject());
+        }
+    }).on('change.filter', function() { 
+        if (debouncedUpdateThumbnails) debouncedUpdateThumbnails(); 
+    });
+    
+    $zoomSlider.off('input.zoom change.zoom').on('input.zoom', function() {
+        if (cropper && cropper.ready && initialZoomRatio !== 0) {
+            let sliderValue = parseFloat($(this).val()); // 0 to 300 (or other max)
+            let zoomFactor = 1 + (sliderValue / 100.0); 
+            let targetAbsoluteZoom = initialZoomRatio * zoomFactor;
+
+            const MIN_CROPPER_ZOOM = 0.01; 
+            const MAX_CROPPER_ZOOM = 15;   
+
+            targetAbsoluteZoom = Math.max(MIN_CROPPER_ZOOM, Math.min(targetAbsoluteZoom, MAX_CROPPER_ZOOM));
+            
+            if (targetAbsoluteZoom > 0.001 && targetAbsoluteZoom < 100) { 
+                 cropper.zoomTo(targetAbsoluteZoom);
+            } else {
+                // console.warn("Zoom target out of practical bounds:", targetAbsoluteZoom);
+            }
+        }
+    }).on('change.zoom', function() { 
+        if (debouncedUpdateThumbnails) debouncedUpdateThumbnails(); 
+    });
 
     // --- Save/Update Button Event Handlers ---
     $(document).off('click.uieSaveMasterDetails').on('click.uieSaveMasterDetails', '.uie-save-master-details-button', function() {
