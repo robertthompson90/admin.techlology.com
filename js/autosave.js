@@ -1,20 +1,22 @@
 // js/autosave.js
-var Autosave = (function(){
-  // Autosave interval: every 30 seconds.
-  var autosaveInterval = 30000;
-  // Debounce delay: autosave triggered 3 seconds after last input.
-  var debounceDelay = 3000;
+// Version 2.0 - Updated for structured data, media asset/variant IDs, and all section types.
+
+var Autosave = (function($){
+  var autosaveInterval = 30000; // 30 seconds
+  var debounceDelay = 3000;    // 3 seconds after last input
   var autosaveTimer;
   var isSaving = false;
-  
-  // ---------------------------
-  // 1. Debounce Helper Function
-  // ---------------------------
-  /**
-   * Returns a debounced version of the provided function.
-   * @param {Function} func - The function to debounce.
-   * @param {number} delay - Delay in milliseconds.
-   */
+
+  // Section type constants (must match js/sections.js and DB)
+  const SUBTITLE_SECTION = 1;
+  const TEXT_SECTION     = 2;
+  const IMAGE_SECTION    = 3;
+  const VIDEO_SECTION    = 4;
+  const GALLERY_SECTION  = 5;
+  const QUOTE_SECTION    = 6;
+  const PROS_CONS_SECTION= 7;
+  const RATING_SECTION   = 8;
+
   function debounce(func, delay) {
     var timer;
     return function() {
@@ -25,227 +27,256 @@ var Autosave = (function(){
       }, delay);
     };
   }
-  
-  // ----------------------------------------------------
-  // 2. Capture the Complete Form State (including sections)
-  // ----------------------------------------------------
-  
-  // Define the section type constants (should match those in Sections module)
-  const SUBTITLE_SECTION = 1;
-  const TEXT_SECTION     = 2;
-  const IMAGE_SECTION    = 3;
-  const VIDEO_SECTION    = 4;
-  const GALLERY_SECTION  = 5;
-  const QUOTE_SECTION    = 6;
-  const PROS_CONS_SECTION= 7;
-  const RATING_SECTION   = 8;
-  
+
   /**
-   * Captures the current state of the article form, including dynamic sections.
+   * Captures the current state of the article form, including dynamic sections
+   * with their new structured data (asset/variant IDs, etc.).
    * @returns {Object} state - A JSON-friendly state object.
    */
   function captureFormState() {
+    console.log("[Autosave] Capturing form state...");
     var state = {
       title: $('#title').val(),
       tagline: $('#tagline').val(),
-		 	thumbnail: $("input[name='thumbnail_cropped_data']").val() || "",
+      thumbnail: { // Store thumbnail as an object
+        asset_id: $('#thumbnail_media_asset_id').val() || null,
+        variant_id: $('#thumbnail_media_variant_id').val() || null,
+        // Storing preview_url might be useful for faster restore, if available
+        preview_url: $('#articleThumbnailPreview').attr('src') !== 'img/placeholder.png' ? $('#articleThumbnailPreview').attr('src') : null
+      },
       seo_title: $('#seo_title').val(),
       meta_description: $('#meta_description').val(),
-      sections: []  // To store dynamic sections
+      selected_tags_string: $('#selected_tags_input').val(), // Keep existing tag string for now
+      sections: []
     };
-  
-    // Loop over each dynamically added section.
+
     $("#sections-container .modular-section").each(function(){
       var $section = $(this);
-      var sectionType = parseInt($section.attr("data-type"), 10);
-      var content = "";  // Default for storing a primary content string
-      var extra = {};    // Optionally store extra data (for pros/cons, captions, etc.)
-  
-      // Capture values based on section type. Adjust selectors as needed.
+      var sectionInstanceId = $section.data('section-instance-id');
+      var sectionType = parseInt($section.data('type'), 10);
+      var sectionEntry = {
+        instanceId: sectionInstanceId, // Preserve instanceId for accurate restoration
+        type: sectionType,
+        content: {}, // For simpler sections like subtitle, text, video, quote, rating verdict
+        data: {}     // For more complex data like image, gallery, pros/cons, rating value
+      };
+
       switch(sectionType) {
         case SUBTITLE_SECTION:
-          content = $section.find("input[name='section_subtitle[]']").val() || "";
+          sectionEntry.content.subtitle = $section.find(`input[name="sections[${sectionInstanceId}][content][subtitle]"]`).val();
           break;
         case TEXT_SECTION:
-          content = $section.find("textarea[name='section_text[]']").val() || "";
+          sectionEntry.content.text = $section.find(`textarea[name="sections[${sectionInstanceId}][content][text]"]`).val();
           break;
         case IMAGE_SECTION:
-          // For images, capture the caption; you might capture other data (like URLs) if needed.
-          extra.caption = $section.find("input[name='section_image_caption[]']").val() || "";
-					// Capture the cropped image data stored in a hidden input.
-				  extra.croppedData = $section.find("input[name='cropped_image_data[]']").val() || "";
+          sectionEntry.data.asset_id = $section.find('.section-asset-id-input').val() || null;
+          sectionEntry.data.variant_id = $section.find('.section-variant-id-input').val() || null;
+          sectionEntry.data.caption_override = $section.find(`input[name="sections[${sectionInstanceId}][data][caption_override]"]`).val();
+          sectionEntry.data.alt_text_override = $section.find(`input[name="sections[${sectionInstanceId}][data][alt_text_override]"]`).val();
+          sectionEntry.data.preview_url = $section.find('.section-image-preview').attr('src') !== 'img/placeholder.png' ? $section.find('.section-image-preview').attr('src') : null;
           break;
         case VIDEO_SECTION:
-          content = $section.find("input[name='section_video[]']").val() || "";
+          sectionEntry.content.video_url = $section.find(`input[name="sections[${sectionInstanceId}][content][video_url]"]`).val();
           break;
         case GALLERY_SECTION:
-					// For galleries, capture the innerHTML of the gallery container.
-					extra.galleryHTML = $section.find(".gallery-container").html() || "";
+          let galleryImagesJson = $section.find('.gallery-images-json-input').val();
+          try {
+            sectionEntry.data.images = JSON.parse(galleryImagesJson || '[]');
+          } catch (e) {
+            console.error("Error parsing gallery JSON for autosave:", e, galleryImagesJson);
+            sectionEntry.data.images = [];
+          }
+          // Potentially capture other gallery settings like layout_style if they exist
           break;
         case QUOTE_SECTION:
-          content = $section.find("textarea[name='section_quote[]']").val() || "";
+          sectionEntry.content.quote_text = $section.find(`textarea[name="sections[${sectionInstanceId}][content][quote_text]"]`).val();
+          sectionEntry.content.quote_author = $section.find(`input[name="sections[${sectionInstanceId}][content][quote_author]"]`).val();
           break;
         case PROS_CONS_SECTION:
-          // Capture the innerHTML of the pros/cons wrapper.
-          extra.prosConsHTML = $section.find(".pros-cons-wrapper").html() || "";
+          sectionEntry.data.pros = [];
+          $section.find('.pros-items-container .pro-input').each(function() {
+            sectionEntry.data.pros.push($(this).val());
+          });
+          sectionEntry.data.cons = [];
+          $section.find('.cons-items-container .con-input').each(function() {
+            sectionEntry.data.cons.push($(this).val());
+          });
           break;
         case RATING_SECTION:
-          content = $section.find("textarea[name='section_verdict[]']").val() || "";
+          sectionEntry.content.rating_value = $section.find('.section-rating-value-input').val();
+          sectionEntry.content.verdict_text = $section.find(`textarea[name="sections[${sectionInstanceId}][content][verdict_text]"]`).val();
           break;
         default:
-          content = $section.html();  // Fallback.
+          console.warn("Autosave: Unknown section type encountered:", sectionType);
+          sectionEntry.content.raw = "Unrecognized section data"; // Fallback
       }
-  
-      state.sections.push({
-        type: sectionType,
-        content: content,
-        extra: extra    // Optional: allows you to store additional values
-      });
+      state.sections.push(sectionEntry);
     });
-    
+    console.log("[Autosave] Captured State:", state);
     return state;
   }
-  
-  // Expose captureFormState globally so other modules (like UndoRedo) can use it.
-  window.captureFormState = captureFormState;
-  
-  // ----------------------------------
-  // 3. Save the Draft Locally in Storage
-  // ----------------------------------
-  /**
-   * Saves the current form state to localStorage.
-   */
+  window.captureFormState = captureFormState; // Expose for UndoRedo if needed
+
   function saveDraftLocally() {
     var state = captureFormState();
     localStorage.setItem("articleDraft", JSON.stringify(state));
     $("#autosave-status").text("Draft saved locally at " + new Date().toLocaleTimeString());
   }
-  
-  // --------------------------------------------------
-  // 4. Restore the Complete Form State & Dynamic Sections
-  // --------------------------------------------------
+
   /**
-   * Restores static fields and dynamic sections based on the provided state.
-   * Uses the Sections module to re-build each dynamic section with placeholders.
-   * Assumes that Sections.getSectionTemplate() and Sections.addSection() are available.
+   * Restores the form state from a saved state object.
    * @param {Object} state - The state object to restore.
    */
   function restoreFormState(state) {
-    // Restore static fields.
-    $('#title').val(state.title);
-    $('#tagline').val(state.tagline);
-    $('#seo_title').val(state.seo_title);
-    $('#meta_description').val(state.meta_description);
-    // Restore thumbnail image preview if present
-		if(state.thumbnail) {
-			var decodedThumbnail = decodeURIComponent(state.thumbnail);
-			// Assume you have a function to render a thumbnail in polaroid style.
-			$(".thumbnail-preview").html(Sections.renderPolaroid(decodedThumbnail, "thumbnail"));
-			// Also, restore the hidden value.
-			if($("input[name='thumbnail_cropped_data']").length === 0) {
-				$(".thumbnail-preview").after('<input type="hidden" name="thumbnail_cropped_data" value="'+ state.thumbnail +'">');
-			} else {
-				$("input[name='thumbnail_cropped_data']").val(state.thumbnail);
-			}
-		}
-		
-    // Clear the dynamic sections container.
-    $("#sections-container").empty();
-    
-    // Rebuild each dynamic section.
-    if (state.sections && state.sections.length) {
-      state.sections.forEach(function(sectionData) {
-        // Build defaults that include the main content...
-        var defaults = { content: sectionData.content };
-        // ...and merge any extra data if available.
-        if (sectionData.extra) {
-          defaults = Object.assign({}, defaults, sectionData.extra);
+    console.log("[Autosave] Restoring form state:", state);
+    if (!state) return;
+
+    $('#title').val(state.title || '');
+    $('#tagline').val(state.tagline || '');
+    $('#seo_title').val(state.seo_title || '');
+    $('#meta_description').val(state.meta_description || '');
+
+    // Restore Thumbnail
+    if (state.thumbnail) {
+        $('#thumbnail_media_asset_id').val(state.thumbnail.asset_id || '');
+        $('#thumbnail_media_variant_id').val(state.thumbnail.variant_id || '');
+        if (state.thumbnail.asset_id && state.thumbnail.preview_url && state.thumbnail.preview_url !== 'img/placeholder.png') {
+            $('#articleThumbnailPreview').attr('src', state.thumbnail.preview_url);
+            let infoText = `Asset: ${state.thumbnail.asset_id}`;
+            if(state.thumbnail.variant_id) infoText += `, Variant: ${state.thumbnail.variant_id}`;
+            $('#thumbnailInfo').text(infoText);
+            $('#removeThumbnailBtn').show();
+        } else {
+            $('#articleThumbnailPreview').attr('src', 'img/placeholder.png');
+            $('#thumbnailInfo').text('No thumbnail selected.');
+            $('#removeThumbnailBtn').hide();
         }
-        // Use the Sections module to add the section.
-        // This will use the getSectionTemplate() function to prefill fields.
-        Sections.addSection(sectionData.type, defaults);
+    }
+
+    // Restore Tags (assuming TagSystem.js has a way to init with a string or array)
+    if (state.selected_tags_string) {
+        // This part depends on how TagSystem is re-initialized.
+        // If TagSystem.init can take a comma-separated string and populate:
+        // $('#tags').val(state.selected_tags_string).trigger('blur'); // or a custom populate function
+        // For now, we assume TagSystem might need manual re-adding or a dedicated restore function.
+        // A simpler approach for now: if tags are just stored as string for submission, set the hidden input.
+        $('#selected_tags_input').val(state.selected_tags_string);
+        // JS for displaying tags as pills would need to re-run based on this hidden input.
+        // This might require calling a function in tags.js to parse and display.
+        if (typeof TagSystem !== 'undefined' && TagSystem.loadTagsFromString) { // Hypothetical function
+            TagSystem.loadTagsFromString(state.selected_tags_string);
+        } else {
+            console.warn("[Autosave] TagSystem.loadTagsFromString not available for restoring tag pills.");
+        }
+    }
+
+
+    // Clear existing sections before restoring
+    $("#sections-container").empty();
+    if (state.sections && Array.isArray(state.sections)) {
+      state.sections.forEach(function(sectionData) {
+        // Pass the entire sectionData object as 'defaults' to addSection.
+        // Sections.addSection will use sectionData.type, sectionData.instanceId,
+        // sectionData.content, and sectionData.data to reconstruct the section.
+        if (typeof Sections !== 'undefined' && Sections.addSection) {
+          Sections.addSection(sectionData.type, sectionData);
+        } else {
+          console.error("[Autosave] Sections module or Sections.addSection function not found!");
+        }
       });
     }
+    // After all sections are added, trigger input for autosave and update UI elements
+    $('#article-form').trigger('input');
+    if (typeof FormNavigation !== 'undefined' && FormNavigation.showStep) { // If FormNavigation is used
+        let currentStep = parseInt(localStorage.getItem("addArticleStep"), 10) || 0;
+        FormNavigation.showStep(currentStep); // Re-apply current step view
+    }
   }
-  
-  // Expose restoreFormState globally.
-  window.restoreFormState = restoreFormState;
-  
-  /**
-   * Restores the draft from localStorage and populates the form.
-   * This function now leverages restoreFormState(state) internally.
-   */
+  window.restoreFormState = restoreFormState; // Expose for UndoRedo
+
   function restoreDraft() {
-    var savedDraft = localStorage.getItem("articleDraft");
-    if (savedDraft) {
+    var savedDraftJson = localStorage.getItem("articleDraft");
+    if (savedDraftJson) {
       try {
-        var state = JSON.parse(savedDraft);
-        // Restore the form using the unified restore function.
+        var state = JSON.parse(savedDraftJson);
         restoreFormState(state);
-        $("#autosave-status").text("Draft restored at " + new Date().toLocaleTimeString());
+        $("#autosave-status").text("Draft restored from local storage at " + new Date().toLocaleTimeString());
         Notifications.show("Draft restored from local storage", "info");
       } catch(err) {
-        console.error("Error restoring draft:", err);
+        console.error("Error restoring draft from localStorage:", err);
+        $("#autosave-status").text("Error restoring draft.");
       }
     }
   }
-  
-  // ----------------------------------------------
-  // 5. Send the Draft State to the Server via AJAX
-  // ----------------------------------------------
-  /**
-   * Sends the current form state to the server.
-   */
+
   function sendDraftToServer() {
     if (isSaving) return;
     isSaving = true;
+    $("#autosave-status").text("Autosaving to server...");
     var state = captureFormState();
     $.ajax({
-      url: "ajax/autosave.php", // Update if your endpoint is different.
+      url: "ajax/autosave.php",
       type: "POST",
-      data: { draft: JSON.stringify(state) },
+      data: { article_draft_data: JSON.stringify(state) }, // Changed key for clarity
       success: function(response) {
-        $("#autosave-status").text("Draft autosaved on server at " + new Date().toLocaleTimeString());
-        Notifications.show("Draft autosaved on server", "info");
+        if (response && response.success) {
+            $("#autosave-status").text("Draft autosaved on server at " + new Date().toLocaleTimeString());
+            Notifications.show("Draft autosaved on server", "info");
+        } else {
+            $("#autosave-status").text("Error autosaving on server: " + (response.error || "Unknown issue"));
+            Notifications.show("Autosave server error: " + (response.error || "Unknown issue"), "error");
+        }
         isSaving = false;
       },
-      error: function() {
-        $("#autosave-status").text("Error autosaving on server.");
-        Notifications.show("Autosave server error", "error");
+      error: function(jqXHR, textStatus, errorThrown) {
+        $("#autosave-status").text("AJAX error autosaving on server: " + textStatus);
+        Notifications.show("Autosave server AJAX error", "error");
         isSaving = false;
       }
     });
   }
-  
-  // -----------------------------------------------------
-  // 6. Combined Debounced Autosave – Triggered on Input
-  // -----------------------------------------------------
+
   var debouncedAutosave = debounce(function(){
-      // Save locally, send to server, and push state for Undo/Redo.
       saveDraftLocally();
       sendDraftToServer();
-      UndoRedo.pushState();
+      if (typeof UndoRedo !== 'undefined' && UndoRedo.pushState) { // Check if UndoRedo is available
+        UndoRedo.pushState();
+      }
   }, debounceDelay);
-  
-  // ---------------------------------
-  // 7. Initialization of Autosave Module
-  // ---------------------------------
+
   function init() {
-    // Immediately restore any saved draft.
-    restoreDraft();
-    
-    // Bind the debounced autosave to input events on the entire article form.
-    $("#article-form").on("input", debouncedAutosave);
-    
-    // Additionally, perform periodic autosave regardless of user input.
-    setInterval(function(){
+    restoreDraft(); // Restore on page load
+
+    // Listen for input on the entire form
+    $("#article-form").on("input change", "input, textarea, select", debouncedAutosave);
+
+    // Also listen for custom events that signify a change needing autosave
+    $(document).on("section:added section:removed section:sorted gallery:item_added gallery:item_removed gallery:item_caption_changed", debouncedAutosave);
+    // Note: 'gallery:item_sorted' would be triggered by sortable's update callback if you implement that fully.
+    // For Pros/Cons, the input events on their text fields should trigger autosave.
+
+    // Periodic autosave (less frequent, as a fallback)
+    autosaveTimer = setInterval(function(){
+      // No need to call pushState here, as it's not a direct user action for undo/redo
       saveDraftLocally();
       sendDraftToServer();
     }, autosaveInterval);
+
+    // Push initial state for Undo/Redo after everything is loaded and potentially restored
+    if (typeof UndoRedo !== 'undefined' && UndoRedo.init && UndoRedo.pushState) {
+        UndoRedo.init(); // Ensure UndoRedo is initialized
+        // A slight delay to ensure all dynamic content (like restored sections) is in place
+        setTimeout(function() {
+            UndoRedo.pushState();
+            console.log("[Autosave] Initial state pushed for Undo/Redo.");
+        }, 500);
+    }
   }
-  
+
   return {
     init: init,
-    restoreDraft: restoreDraft
+    restoreDraft: restoreDraft, // Expose if needed externally
+    captureState: captureFormState, // Expose for other modules like UndoRedo
+    restoreState: restoreFormState  // Expose for other modules
   };
-})();
+})(jQuery);
