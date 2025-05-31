@@ -1,6 +1,7 @@
 // js/sections.js
-// Version 2.3 - Final Dropzone-First Templates for Image/Gallery. Font Awesome icons.
-//               Ensured all section constants are defined. Uses global placeholders.
+// Version 2.4 - Final Dropzone-First Templates for Image/Gallery. Font Awesome icons.
+//               All section constants defined. Uses global placeholders.
+//               Corrected imgInfo/imgInfoText typo.
 
 var Sections = (function($){
   const SUBTITLE_SECTION = 1;
@@ -63,7 +64,7 @@ var Sections = (function($){
         break;
       case IMAGE_SECTION:
         let imgSrc = (defaults.data && defaults.data.preview_url && defaults.data.preview_url !== placeholderImgGlobal) ? defaults.data.preview_url : '';
-        let imgInfoText = 'Click, Drop, or Paste Image';
+        let imgInfoText = 'Click, Drop, or Paste Image'; // Corrected variable name
         let assetIdVal = (defaults.data && defaults.data.asset_id) || '';
         let variantIdVal = (defaults.data && defaults.data.variant_id) || '';
         let captionOverrideVal = (defaults.data && defaults.data.caption_override) || '';
@@ -75,13 +76,13 @@ var Sections = (function($){
         html += '<h3>Image Section</h3>';
         html += `<div class="section-image-module" data-parent-instance-id="${sectionInstanceId}">`;
         html += `  <div class="section-image-interactive-area dropzone section-specific-dropzone ${hasImage ? 'has-image' : 'no-image'}" data-target-type="sectionImage" title="${hasImage ? 'Click to Change/Edit Image' : 'Click, Drop, or Paste Image'}">`;
-        html += `    <div class="section-image-preview-container ${hasImage ? '' : 'empty'}">`; // Add 'empty' class if no image
-        html += `      <img src="${imgSrc || placeholderImgGlobal}" alt="Image Section Preview" class="section-image-preview" ${hasImage ? '' : 'style="display:none;"'}>`;
-        html += `      <div class="dropzone-placeholder-text" ${hasImage ? 'style="display:none;"' : ''}>Click, Drop, or Paste Image</div>`;
+        html += `    <div class="section-image-preview-container ${hasImage ? '' : 'empty-preview'}" style="${hasImage ? '' : 'display:none;'}">`;
+        html += `      <img src="${imgSrc}" alt="Image Section Preview" class="section-image-preview">`; // Src is empty if no image initially
         html += `    </div>`;
-        html += `    <span class="section-image-info media-item-title" ${hasImage ? '' : 'style="display:none;"'}>${imgInfo}</span>`;
+        html += `    <span class="section-image-info media-item-title" style="${hasImage ? '' : 'display:none;'}">${imgInfoText}</span>`;
+        html += `    <div class="dropzone-placeholder-text" style="${hasImage ? 'display:none;' : ''}">Click, Drop, or Paste Image</div>`;
         html += `  </div>`;
-        html += `  <div class="section-image-actions" style="${hasImage ? '' : 'display:none;'}">`;
+        html += `  <div class="section-image-actions" style="${hasImage ? 'display:flex;' : 'display:none;'}">`; // Use flex for actions
         html += `    <button type="button" class="btn btn-change-edit-section-image action-icon" title="Change/Edit Image"><i class="fas fa-edit"></i></button>`;
         html += `    <button type="button" class="btn btn-remove-section-image action-icon" title="Remove Image"><i class="fas fa-trash-alt"></i></button>`;
         html += `  </div>`;
@@ -100,7 +101,7 @@ var Sections = (function($){
       case GALLERY_SECTION:
         html += '<h3>Gallery Section</h3>';
         html += `<div class="section-gallery-controls" data-parent-instance-id="${sectionInstanceId}">`;
-        html += `  <div class="dropzone dropzone-gallery section-specific-dropzone" data-target-type="galleryImageAddition">Drop images here or Click/Paste to Add to Gallery</div>`;
+        html += `  <div class="dropzone dropzone-gallery section-specific-dropzone" data-target-type="galleryImageAddition" title="Click, Drop, or Paste Images for Gallery">Drop images here or Click/Paste to Add to Gallery</div>`;
         html += '</div>';
         html += `<div class="gallery-preview-container section-gallery-items-container sortable-gallery" data-parent-instance-id="${sectionInstanceId}">`;
         if (defaults.data && defaults.data.images && Array.isArray(defaults.data.images)) {
@@ -172,7 +173,7 @@ var Sections = (function($){
     if (!sectionId) return;
     var sectionHtml = getSectionTemplate(sectionId, defaults);
     var $sectionElem = $(sectionHtml);
-    $sectionElem.find(".remove-section-btn").on("click", function(){
+    $sectionElem.find(".remove-section-btn.action-icon").on("click", function(){ // Ensure targeting the icon version
       var $parentSection = $(this).closest(".modular-section");
       var removedSectionType = parseInt($parentSection.attr("data-type"));
       $parentSection.fadeOut(300, function() { $(this).remove(); });

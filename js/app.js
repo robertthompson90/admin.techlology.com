@@ -1,7 +1,8 @@
 // js/app.js
-// Version 1.7 - Finalized initialization logic for TagSystem, Sources, MediaLibrary, and UIE.
+// Version 1.8 - Finalized initialization logic for TagSystem, Sources, MediaLibrary.
+// Ensures modules are initialized with correct context for addarticle.php vs other pages.
 $(document).ready(function(){
-  console.log("[App.js] Initializing application modules v1.7...");
+  console.log("[App.js] Initializing application modules v1.8...");
 
   var modules = [
     "Validation",
@@ -18,49 +19,51 @@ $(document).ready(function(){
     "MediaUpload",
     "StagingArea",
     "UndoRedo"
-    // "UnifiedImageEditor" // No global init() method, it's self-contained or called directly
-    // "addarticle_interactions" // Self-initializing via its own $(document).ready()
+    // "UnifiedImageEditor" // No global init() method
+    // "addarticle_interactions" // Self-initializing
   ];
 
-  // Initialize Notifications first if it exists
   if (typeof Notifications !== "undefined" && typeof Notifications.init === "function") {
-    Notifications.init(); // Assuming it has an init
-    console.log("[Notifications] initialized.");
+    Notifications.init();
   } else if (typeof Notifications !== "undefined" && Notifications.show) {
     console.log("[Notifications] module available (show function exists).");
   } else {
-    console.warn("[Notifications] module not loaded. Some feedback may be missing.");
+    console.warn("[Notifications] module not loaded.");
   }
 
+  var onAddArticlePage = $('body').hasClass('add-article-page');
+  var onMediaLibraryPage = $('body').hasClass('media-library-page');
+
   modules.forEach(function(moduleName) {
-    if (moduleName === "addarticle_interactions" && $('body').hasClass('add-article-page')) {
+    if (moduleName === "addarticle_interactions" && onAddArticlePage) {
         // This module is self-initializing via its own $(document).ready()
         // console.log("[AddArticleInteractions] is self-initializing.");
         return; 
     }
 
-    // Contextual Initialization for specific modules
+    // Contextual Initialization
     if (moduleName === "TagSystem") {
-      if ($('body').hasClass('add-article-page')) { // Only on addarticle page
+      if (onAddArticlePage) {
         if (typeof window.TagSystem !== 'undefined' && typeof window.TagSystem.init === 'function') {
           try {
             window.TagSystem.init({
               itemType: 'article', 
-              itemId: null,        // itemId is null for a new article, TagSystem should handle this
+              itemId: null, // For new articles
               inputSelector: '#tags-input-field', 
               listSelector: '#selected-tags-container',
               addTagOnBlur: true
             });
             console.log("[TagSystem] initialized for addarticle.php.");
           } catch (e) { console.error("Error initializing [TagSystem] for addarticle.php:", e); }
-        } else { console.warn("[TagSystem] module not found or init function missing for addarticle.php."); }
+        } else { console.warn("[TagSystem] module not found for addarticle.php."); }
       }
       // TagSystem for UIE is initialized by UIE itself when it sets context.
+      // No generic init for media-library-page here for TagSystem.
       return; 
     }
     
     if (moduleName === "Sources") {
-        if ($('body').hasClass('add-article-page') && $('#sources-section').length > 0) {
+        if (onAddArticlePage && $('#sources-section').length > 0) { // Only init if sources section exists
             if (typeof window.Sources !== 'undefined' && typeof window.Sources.init === 'function') {
                 try { window.Sources.init(); console.log("[Sources] initialized for addarticle.php."); }
                 catch (e) { console.error("Error initializing module [Sources]:", e); }
@@ -72,18 +75,23 @@ $(document).ready(function(){
     if (moduleName === "MediaLibrary") {
         if (typeof window.MediaLibrary !== 'undefined' && typeof window.MediaLibrary.init === 'function') {
             try {
-                let mediaLibOptions = {};
-                if ($('body').hasClass('add-article-page')) {
+                let mediaLibOptions = { targetPage: null }; // Default to unknown
+                if (onAddArticlePage) {
                     mediaLibOptions.targetPage = 'addarticle';
                     mediaLibOptions.searchInput = '#media-search-input-addarticle';
                     mediaLibOptions.tagFilterInput = '#media-tag-filter-addarticle';
                     mediaLibOptions.showVariantsCheckbox = '#media-show-variants-addarticle';
-                } else if ($('body').hasClass('media-library-page')) {
+                } else if (onMediaLibraryPage) {
                     mediaLibOptions.targetPage = 'medialibrary';
-                    // Default selectors in mediaLibrary.js will be used
+                    // Uses default selectors defined within mediaLibrary.js if not overridden by options
                 }
-                window.MediaLibrary.init(mediaLibOptions);
-                // console.log(`[MediaLibrary] initialized for ${mediaLibOptions.targetPage || 'unknown page context'}.`);
+                // Only init if we have a known page context for media library
+                if (mediaLibOptions.targetPage) {
+                    window.MediaLibrary.init(mediaLibOptions);
+                    console.log(`[MediaLibrary] initialized for ${mediaLibOptions.targetPage}.`);
+                } else {
+                    // console.log("[MediaLibrary] Not on a page requiring MediaLibrary init (addarticle or medialibrary).");
+                }
             } catch (e) { console.error("Error initializing module [MediaLibrary]:", e); }
         } else { console.warn("[MediaLibrary] module not found or init function missing.");}
         return;
@@ -104,7 +112,7 @@ $(document).ready(function(){
       // Refined critical module check
       const criticalModules = {
           'add-article-page': ["Sections", "Autosave", "MediaUpload", "Dropzones", "FormNavigation", "UnifiedImageEditor"],
-          'media-library-page': ["UnifiedImageEditor", "MediaUpload", "TagSystem"] // MediaLibrary is handled above
+          'media-library-page': ["UnifiedImageEditor", "MediaUpload"] // MediaLibrary & TagSystem handled above
       };
       let pageClass = $('body').attr('class') || "";
       let isCriticalOnThisPage = false;
