@@ -7,7 +7,7 @@ var MediaLibrary = (function($){
     searchInput: '#media-search-input', 
     tagFilterInput: '#media-tag-filter', 
     showVariantsCheckbox: '#media-show-variants',
-    targetPage: 'medialibrary'
+    targetPage: 'medialibrary' // Default context
   };
   
   // Ensure G_PLACEHOLDER_IMAGE_PATH and G_LOADING_GIF_PATH are defined in addarticle.php <script> block
@@ -19,6 +19,7 @@ var MediaLibrary = (function($){
     let query = $(config.searchInput).val() || "";
     let tagFilter = $(config.tagFilterInput).val() || "";
     let showVariants = $(config.showVariantsCheckbox).is(':checked') || false;
+    // console.log("[MediaLibrary] Getting filters for target:", config.targetPage, {query, tagFilter, showVariants});
     return { query, tagFilter, showVariants };
   }
 
@@ -36,25 +37,32 @@ var MediaLibrary = (function($){
 
   function loadMedia() {
     const filters = getCurrentMediaLibraryFilters();
-    $('#global-media').html(`<p style="text-align:center; padding:20px;"><img src="${loadingGifPathGlobal}" alt="Loading..." style="width:24px; height:24px; vertical-align:middle; margin-right:8px;"> Loading media...</p>`);
+    // Check if #global-media exists before trying to update it
+    const $globalMediaContainer = $('#global-media');
+    if (!$globalMediaContainer.length) {
+        // console.warn("[MediaLibrary] #global-media container not found on this page. Skipping loadMedia.");
+        return;
+    }
+    $globalMediaContainer.html(`<p style="text-align:center; padding:20px;"><img src="${loadingGifPathGlobal}" alt="Loading..." style="width:24px; height:24px; vertical-align:middle; margin-right:8px;"> Loading media...</p>`);
+    
     $.ajax({
       url: "ajax/getGlobalMedia.php", type: "GET",
       data: { q: filters.query, tag_filter: filters.tagFilter, show_variants: filters.showVariants },
       dataType: "json",
       success: function(response) {
-        let mediaData = response; if (typeof response === 'string') { try { mediaData = JSON.parse(response); } catch (e) { $("#global-media").html("<p class='media-error-message'>Error parsing media data.</p>"); return; }}
+        let mediaData = response; if (typeof response === 'string') { try { mediaData = JSON.parse(response); } catch (e) { $globalMediaContainer.html("<p class='media-error-message'>Error parsing media data.</p>"); return; }}
         renderMedia(mediaData);
       },
-      error: function() { $("#global-media").html("<p class='media-error-message'>Error loading global media.</p>"); }
+      error: function() { $globalMediaContainer.html("<p class='media-error-message'>Error loading global media.</p>"); }
     });
   }
 
   function renderMedia(mediaArray) {
-    var $globalMedia = $("#global-media"); $globalMedia.empty();
+    var $globalMedia = $("#global-media"); $globalMedia.empty(); // Ensure it's emptied before rendering
     if (mediaArray && Array.isArray(mediaArray) && mediaArray.length > 0) {
       mediaArray.forEach(function(mediaAsset) {
         var $item = $("<div></div>").addClass("global-media-item").data("asset-data", mediaAsset)
-                      .attr('data-asset-id', mediaAsset.id); // Add asset-id for easier selection
+                      .attr('data-asset-id', mediaAsset.id); 
         const isVirtualMaster = mediaAsset.physical_source_asset_id && mediaAsset.physical_source_asset_id !== mediaAsset.id && mediaAsset.physical_source_asset_id !== null && !mediaAsset.is_variant;
         const isVariant = mediaAsset.is_variant === true || mediaAsset.is_variant === "true";
         let displayTitle = '';
@@ -73,17 +81,17 @@ var MediaLibrary = (function($){
               console.log("[MediaLibrary] Clicked in 'picker mode' for addarticle. Handing off.");
               e.stopImmediatePropagation(); window.handleMediaLibrarySelectionForArticle(clickedAssetData); return;
           }
-          if (!clickedAssetData || !clickedAssetData.id) { Notifications.show("Error: Media asset data missing.", "error"); return; }
+          if (!clickedAssetData || !clickedAssetData.id) { if(typeof Notifications !== 'undefined') Notifications.show("Error: Media asset data missing.", "error"); return; }
           let masterAssetDataForUIE, physicalUrlForUIEToOpen = clickedAssetData.image_url, uieOpenOptions = {};
           if (clickedAssetData.is_variant) {
             masterAssetDataForUIE = { id: clickedAssetData.media_asset_id_for_variant, admin_title: clickedAssetData.master_admin_title, public_caption: clickedAssetData.master_public_caption, alt_text: clickedAssetData.master_alt_text, source_url: clickedAssetData.master_source_url, attribution: clickedAssetData.master_attribution, default_crop: clickedAssetData.master_default_crop, filter_state: clickedAssetData.master_filter_state, physical_source_asset_id: clickedAssetData.master_physical_source_asset_id, image_url: clickedAssetData.image_url };
             uieOpenOptions.targetVariantId = clickedAssetData.variant_id;
             try { if (clickedAssetData.variant_details_parsed) { uieOpenOptions.targetVariantDetails = clickedAssetData.variant_details_parsed; } else if (clickedAssetData.variant_details) { uieOpenOptions.targetVariantDetails = JSON.parse(clickedAssetData.variant_details); } else { throw new Error("Variant details missing."); }}
-            catch (parseError) { Notifications.show("Error parsing variant details.", "error"); return; }
+            catch (parseError) { if(typeof Notifications !== 'undefined') Notifications.show("Error parsing variant details.", "error"); return; }
             uieOpenOptions.targetVariantTitle = clickedAssetData.variant_type || `Variant ${clickedAssetData.variant_id}`;
           } else { masterAssetDataForUIE = clickedAssetData; }
-          if (!masterAssetDataForUIE || !masterAssetDataForUIE.id || !physicalUrlForUIEToOpen) { Notifications.show("Error: Cannot determine asset data for editor.", "error"); return; }
-          UnifiedImageEditor.openEditor(physicalUrlForUIEToOpen, masterAssetDataForUIE, () => { loadMedia(); }, () => {}, uieOpenOptions);
+          if (!masterAssetDataForUIE || !masterAssetDataForUIE.id || !physicalUrlForUIEToOpen) { if(typeof Notifications !== 'undefined') Notifications.show("Error: Cannot determine asset data for editor.", "error"); return; }
+          if (typeof UnifiedImageEditor !== 'undefined') UnifiedImageEditor.openEditor(physicalUrlForUIEToOpen, masterAssetDataForUIE, () => { loadMedia(); }, () => {}, uieOpenOptions); else console.error("UnifiedImageEditor not defined.");
         });
         $globalMedia.append($item);
         const imgEl = $imgContainer.find('img.lazy-load-media-thumb')[0];
@@ -109,47 +117,45 @@ var MediaLibrary = (function($){
     else { $globalMedia.html("<p class='media-error-message'>Received invalid media data format.</p>"); }
   }
 
-  function loadTagFilters() {
+  function loadTagFilters() { // Populates the select defined in config.tagFilterInput
+    const $tagFilterSelect = $(config.tagFilterInput);
+    if (!$tagFilterSelect.length) { 
+        // console.warn("[MediaLibrary] Tag filter select not found for this page:", config.tagFilterInput); 
+        return;
+    }
     $.ajax({
         url: 'ajax/getAllTags.php', type: 'GET', dataType: 'json',
         success: function(tags) {
-            const $tagFilterSelect = $(config.tagFilterInput);
-            if (!$tagFilterSelect.length) { console.warn("[MediaLibrary] Tag filter select not found:", config.tagFilterInput); return;}
             $tagFilterSelect.empty().append('<option value="">All Tags</option>');
             if (tags && tags.length > 0) {
                 tags.forEach(function(tag) { $tagFilterSelect.append(`<option value="${tag.id}">${tag.name}</option>`); });
             }
         },
-        error: function() {
-            const $tagFilterSelect = $(config.tagFilterInput);
-            if ($tagFilterSelect.length) $tagFilterSelect.empty().append('<option value="">Error loading tags</option>');
-        }
+        error: function() { $tagFilterSelect.empty().append('<option value="">Error loading tags</option>'); }
     });
   }
 
   function init(options = {}){
-    // Determine page context to set correct selectors
-    if ($('body').hasClass('add-article-page')) {
-        config.targetPage = 'addarticle';
-    } else if ($('body').hasClass('media-library-page')) {
-        config.targetPage = 'medialibrary';
-    } else {
-        config.targetPage = null; // Unknown context
+    // Determine page context to set correct selectors FIRST
+    if (options.targetPage) { 
+        config.targetPage = options.targetPage;
+    } else { 
+        config.targetPage = $('body').hasClass('add-article-page') ? 'addarticle' : 
+                            ($('body').hasClass('media-library-page') ? 'medialibrary' : null);
     }
 
-    // Override default selectors if specific ones are passed for the current page context
+    // THEN set selectors based on determined context or passed options
     if (config.targetPage === 'addarticle') {
         config.searchInput = options.searchInput || '#media-search-input-addarticle';
         config.tagFilterInput = options.tagFilterInput || '#media-tag-filter-addarticle';
         config.showVariantsCheckbox = options.showVariantsCheckbox || '#media-show-variants-addarticle';
-    } else if (config.targetPage === 'medialibrary') { // Default to medialibrary.php selectors
+    } else if (config.targetPage === 'medialibrary') { 
         config.searchInput = options.searchInput || '#media-search-input';
         config.tagFilterInput = options.tagFilterInput || '#media-tag-filter';
         config.showVariantsCheckbox = options.showVariantsCheckbox || '#media-show-variants';
     } else {
-        // If not on a known page, don't try to bind to non-existent elements.
-        // console.log("[MediaLibrary] Not on a recognized page for MediaLibrary filter initialization.");
-        return;
+        console.log("[MediaLibrary] Not on a recognized page for MediaLibrary filter initialization. No event listeners bound.");
+        return; // Do not bind if selectors are not for a known context
     }
     // console.log("[MediaLibrary] Initializing for target:", config.targetPage, "with selectors:", config.searchInput, config.tagFilterInput, config.showVariantsCheckbox);
 
@@ -158,19 +164,17 @@ var MediaLibrary = (function($){
     const $vCheckbox = $(config.showVariantsCheckbox);
 
     if ($sInput.length) { $sInput.off('input.medialib').on("input.medialib", debounce(function(){ loadMedia(); }, 300)); }
-    else if (config.targetPage) { console.warn(`[MediaLibrary] Search input '${config.searchInput}' not found.`);}
+    else { console.warn(`[MediaLibrary] Search input '${config.searchInput}' not found for ${config.targetPage || 'current page'}.`);}
     
-    if ($tInput.length) { $tInput.off('change.medialib').on("change.medialib", function(){ loadMedia(); }); loadTagFilters(); }
-    else if (config.targetPage) { console.warn(`[MediaLibrary] Tag filter input '${config.tagFilterInput}' not found.`);}
+    if ($tInput.length) { $tInput.off('change.medialib').on("change.medialib", function(){ loadMedia(); }); loadTagFilters(); } // loadTagFilters populates this select
+    else { console.warn(`[MediaLibrary] Tag filter input '${config.tagFilterInput}' not found for ${config.targetPage || 'current page'}.`);}
 
     if ($vCheckbox.length) { $vCheckbox.off('change.medialib').on("change.medialib", function(){ loadMedia(); }); }
-    else if (config.targetPage) { console.warn(`[MediaLibrary] Show variants checkbox '${config.showVariantsCheckbox}' not found.`);}
+    else { console.warn(`[MediaLibrary] Show variants checkbox '${config.showVariantsCheckbox}' not found for ${config.targetPage || 'current page'}.`);}
     
-    // Initial load if any filter controls exist for the current page context
     if ($sInput.length || $tInput.length || $vCheckbox.length) {
         loadMedia(); 
-    } else if (config.targetPage === 'medialibrary' && !$sInput.length && !$tInput.length && !$vCheckbox.length) {
-        // If on media library page, but somehow no filters (e.g. old HTML version), still load all
+    } else if (config.targetPage === 'medialibrary') { // Fallback for main media library page if filters somehow removed from HTML
         loadMedia();
     }
   }

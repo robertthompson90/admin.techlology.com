@@ -1,7 +1,7 @@
 // js/sections.js
 // Version 2.4 - Final Dropzone-First Templates for Image/Gallery. Font Awesome icons.
 //               All section constants defined. Uses global placeholders.
-//               Corrected imgInfo/imgInfoText typo.
+//               Corrected imgInfoText variable name. img src cleared for empty.
 
 var Sections = (function($){
   const SUBTITLE_SECTION = 1;
@@ -64,25 +64,25 @@ var Sections = (function($){
         break;
       case IMAGE_SECTION:
         let imgSrc = (defaults.data && defaults.data.preview_url && defaults.data.preview_url !== placeholderImgGlobal) ? defaults.data.preview_url : '';
-        let imgInfoText = 'Click, Drop, or Paste Image'; // Corrected variable name
+        let imgInfoTextForDisplay = 'Click, Drop, or Paste Image';
         let assetIdVal = (defaults.data && defaults.data.asset_id) || '';
         let variantIdVal = (defaults.data && defaults.data.variant_id) || '';
         let captionOverrideVal = (defaults.data && defaults.data.caption_override) || '';
         let altOverrideVal = (defaults.data && defaults.data.alt_text_override) || '';
         let hasImage = !!assetIdVal;
 
-        if (hasImage) { imgInfoText = `Asset: ${assetIdVal}` + (variantIdVal ? `, Variant: ${variantIdVal}` : ''); }
+        if (hasImage) { imgInfoTextForDisplay = `Asset: ${assetIdVal}` + (variantIdVal ? `, Variant: ${variantIdVal}` : ''); }
 
         html += '<h3>Image Section</h3>';
         html += `<div class="section-image-module" data-parent-instance-id="${sectionInstanceId}">`;
         html += `  <div class="section-image-interactive-area dropzone section-specific-dropzone ${hasImage ? 'has-image' : 'no-image'}" data-target-type="sectionImage" title="${hasImage ? 'Click to Change/Edit Image' : 'Click, Drop, or Paste Image'}">`;
-        html += `    <div class="section-image-preview-container ${hasImage ? '' : 'empty-preview'}" style="${hasImage ? '' : 'display:none;'}">`;
-        html += `      <img src="${imgSrc}" alt="Image Section Preview" class="section-image-preview">`; // Src is empty if no image initially
+        html += `    <div class="section-image-preview-container ${hasImage ? '' : 'empty-preview'}" style="${hasImage ? '' : 'display:none;'}">`; // Start hidden if no image
+        html += `      <img src="${imgSrc}" alt="Image Section Preview" class="section-image-preview">`; // Src can be empty initially
         html += `    </div>`;
-        html += `    <span class="section-image-info media-item-title" style="${hasImage ? '' : 'display:none;'}">${imgInfoText}</span>`;
-        html += `    <div class="dropzone-placeholder-text" style="${hasImage ? 'display:none;' : ''}">Click, Drop, or Paste Image</div>`;
+        html += `    <span class="section-image-info media-item-title" style="${hasImage ? '' : 'display:none;'}">${imgInfoTextForDisplay}</span>`;
+        html += `    <div class="dropzone-placeholder-text" style="${hasImage ? 'display:none;' : ''}"><i class="fas fa-image"></i> Click, Drop, or Paste Image</div>`;
         html += `  </div>`;
-        html += `  <div class="section-image-actions" style="${hasImage ? 'display:flex;' : 'display:none;'}">`; // Use flex for actions
+        html += `  <div class="section-image-actions" style="${hasImage ? 'display:flex;' : 'display:none;'}">`;
         html += `    <button type="button" class="btn btn-change-edit-section-image action-icon" title="Change/Edit Image"><i class="fas fa-edit"></i></button>`;
         html += `    <button type="button" class="btn btn-remove-section-image action-icon" title="Remove Image"><i class="fas fa-trash-alt"></i></button>`;
         html += `  </div>`;
@@ -101,7 +101,7 @@ var Sections = (function($){
       case GALLERY_SECTION:
         html += '<h3>Gallery Section</h3>';
         html += `<div class="section-gallery-controls" data-parent-instance-id="${sectionInstanceId}">`;
-        html += `  <div class="dropzone dropzone-gallery section-specific-dropzone" data-target-type="galleryImageAddition" title="Click, Drop, or Paste Images for Gallery">Drop images here or Click/Paste to Add to Gallery</div>`;
+        html += `  <div class="dropzone dropzone-gallery section-specific-dropzone" data-target-type="galleryImageAddition" title="Click, Drop, or Paste Images for Gallery"><i class="fas fa-images"></i> Drop images here or Click/Paste to Add to Gallery</div>`;
         html += '</div>';
         html += `<div class="gallery-preview-container section-gallery-items-container sortable-gallery" data-parent-instance-id="${sectionInstanceId}">`;
         if (defaults.data && defaults.data.images && Array.isArray(defaults.data.images)) {
@@ -218,6 +218,11 @@ var Sections = (function($){
 
   return {
     init: initSections, addSection: addSection, getSectionTemplate: getSectionTemplate,
-    newProsItemRow: newProsItemRow, newConsItemRow: newConsItemRow
+    newProsItemRow: newProsItemRow, newConsItemRow: newConsItemRow,
+    // Expose constants for addarticle_interactions.js
+    IMAGE_SECTION: IMAGE_SECTION,
+    GALLERY_SECTION: GALLERY_SECTION,
+    PROS_CONS_SECTION: PROS_CONS_SECTION,
+    RATING_SECTION: RATING_SECTION
   };
 })(jQuery);

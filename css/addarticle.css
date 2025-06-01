@@ -12,7 +12,7 @@ body::-webkit-scrollbar,
 .cons-items-container::-webkit-scrollbar,
 #global-media::-webkit-scrollbar,
 #staging-media::-webkit-scrollbar,
-.uie-container ::-webkit-scrollbar {
+.uie-container ::-webkit-scrollbar { /* For UIE too */
     width: 10px; height: 10px;
 }
 body::-webkit-scrollbar-thumb,
@@ -24,8 +24,8 @@ body::-webkit-scrollbar-thumb,
 #global-media::-webkit-scrollbar-thumb,
 #staging-media::-webkit-scrollbar-thumb,
 .uie-container ::-webkit-scrollbar-thumb {
-    background: #4f565f; border-radius: 5px; border: 2px solid #2a2e33;
-    background-clip: padding-box;
+    background: #4f565f; border-radius: 5px; border: 2px solid #2a2e33; 
+    background-clip: padding-box; 
 }
 body::-webkit-scrollbar-track,
 .main::-webkit-scrollbar-track,
@@ -36,63 +36,136 @@ body::-webkit-scrollbar-track,
 #global-media::-webkit-scrollbar-track,
 #staging-media::-webkit-scrollbar-track,
 .uie-container ::-webkit-scrollbar-track {
-    background: #1c1e22; border-radius: 5px;
+    background: #1c1e22; 
+    border-radius: 5px;
 }
 
+
 /* --- CORE LAYOUT (from v2.7) --- */
-body.add-article-page .layout, .layout { /* ... (same as v2.7) ... */ }
-.sidebar { /* ... (same as v2.7) ... */ }
-.main { /* ... (same as v2.7) ... */ }
-.media-panels { /* ... (same as v2.7) ... */ }
-.main h1 { /* ... (same as v2.7) ... */ }
+body.add-article-page .layout, .layout {
+  display: grid; grid-template-columns: 220px 1fr minmax(340px, 1.5fr); /* Media panel slightly wider min */
+  grid-template-rows: 100vh; height: 100vh; overflow: hidden; background-color: #121212;
+}
+.sidebar { overflow-y: auto; min-width: 0; background-color: #1c1f23; border-right: 1px solid #303338;}
+.main { padding: 25px; overflow-y: auto; min-width: 0; }
+.media-panels {
+  background: #1c1f23; /* Darker to match sidebar */ padding: 20px; border-left: 1px solid #303338;
+  overflow-y: auto; color: #c5c5c5; display: flex; flex-direction: column;
+  gap: 20px; min-width: 0;
+}
+.main h1 {
+  color: #e0e0e0; font-size: 24px; font-weight: 600; margin-bottom: 15px;
+  border-bottom: 1px solid #3a3f44; padding-bottom: 15px;
+}
 
 /* --- STEP NAVIGATION TABS (from v2.7) --- */
-#article-form > ul.form-tabs { /* ... (same as v2.7) ... */ }
-#article-form > ul.form-tabs li { /* ... (same as v2.7) ... */ }
-#article-form > ul.form-tabs li:hover { /* ... (same as v2.7) ... */ }
-#article-form > ul.form-tabs li.active { /* ... (same as v2.7) ... */ }
+#article-form > ul.form-tabs {
+  list-style: none; padding: 0; margin: 0 0 25px 0; display: flex;
+  flex-wrap: wrap; gap: 0; border-bottom: 2px solid #3a3f44;
+}
+#article-form > ul.form-tabs li {
+  padding: 12px 22px; cursor: pointer; color: #a8b2c0; font-weight: 500; font-size: 14px;
+  border: 1px solid transparent; border-bottom: 3px solid transparent; margin-bottom: -2px;
+  transition: color 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  border-top-left-radius: 5px; border-top-right-radius: 5px;
+  background-color: transparent; margin-right: 4px;
+}
+#article-form > ul.form-tabs li:hover { color: #ffffff; background-color: #383c42; border-bottom-color: #525a63;}
+#article-form > ul.form-tabs li.active {
+  color: #00aeff; border-color: #3a3f44; border-bottom-color: #2a2e33;
+  background-color: #2a2e33; font-weight: 600;
+}
 
 /* --- AUTOSAVE STATUS & UNDO/REDO (from v2.7) --- */
-#autosave-status { /* ... (same as v2.7) ... */ }
-.undo-redo-controls { /* ... (same as v2.7) ... */ }
-.undo-redo-controls .btn i { /* ... (same as v2.7) ... */ }
+#autosave-status {
+  margin-bottom: 20px; font-style: normal; color: #9098a1; font-size: 13px;
+  padding: 10px 15px; line-height: 1.5; background-color: #202327;
+  border-radius: 4px; border: 1px solid #303338; text-align: left;
+}
+.undo-redo-controls { margin-bottom: 20px; display: flex; gap: 10px; }
+.undo-redo-controls .btn i { margin-right: 6px; }
 
 /* --- CARD STYLING (from v2.7) --- */
-.card { /* ... (same as v2.7) ... */ }
-.card h2 { /* ... (same as v2.7) ... */ }
+.card {
+  background: #2a2e33; border: 1px solid #3c3f44; border-radius: 6px;
+  padding: 25px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.card h2 {
+  background: #33383e; padding: 12px 20px; margin: -25px -25px 25px -25px;
+  border-bottom: 1px solid #3c3f44; font-size: 14px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px; color: #d0d0d0;
+  border-top-left-radius: 6px; border-top-right-radius: 6px;
+}
 
 /* --- FORM ELEMENTS (from v2.7) --- */
-label { /* ... (same as v2.7) ... */ }
-input[type="text"], input[type="url"], textarea, select { /* ... (same as v2.7) ... */ }
-input[type="text"]:focus, input[type="url"]:focus, textarea:focus, select:focus { /* ... (same as v2.7) ... */ }
-textarea { /* ... (same as v2.7) ... */ }
-select { /* ... (same as v2.7) ... */ }
-input[type="checkbox"] { /* ... (same as v2.7) ... */}
+label { display: block; margin-top: 20px; margin-bottom: 8px; font-size: 13px; color: #b0bac7; font-weight: 500; }
+label:first-of-type { margin-top: 0; }
+label.checkbox-label { display: inline-block; margin-left: 5px; font-weight: normal; text-transform: none; vertical-align: middle;}
+
+input[type="text"], input[type="url"], textarea, select {
+  width: 100%; background: #1c1e22; border: 1px solid #40454c;
+  color: #e8e8e8; padding: 12px 14px; margin-bottom: 18px;
+  font-size: 14px; border-radius: 4px;
+  transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;
+}
+input[type="text"]:focus, input[type="url"]:focus, textarea:focus, select:focus {
+  outline: none; border-color: #008cff; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+textarea { min-height: 100px; resize: vertical; line-height: 1.6; }
+select {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23b0bac7'%3E%3Cpath d='M8 11.207l-4.667-4.667.943-.943L8 9.322l3.724-3.725.943.943z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    background-size: 12px 12px; padding-right: 35px;
+}
+input[type="checkbox"] { width: auto; margin-right: 5px; vertical-align: middle;}
+
 
 /* --- BUTTONS (from v2.7) --- */
-.btn, button, input[type="submit"] { /* ... (same as v2.7) ... */ }
-.btn i, button i { /* ... (same as v2.7) ... */ }
+.btn, button, input[type="submit"] {
+  padding: 9px 18px; font-size: 14px; font-weight: 500; border-radius: 4px;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, transform 0.1s ease-in-out, box-shadow 0.15s ease-in-out;
+  border: 1px solid transparent; color: #ffffff; letter-spacing: 0.4px;
+  cursor: pointer; text-align: center; vertical-align: middle; line-height: 1.5;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn i, button i { margin-right: 8px; font-size: 0.9em; }
 /* ... other button styles from v2.7 ... */
-.action-icon { /* ... (same as v2.7) ... */ }
-.action-icon:hover { /* ... (same as v2.7) ... */ }
+.action-icon {
+  background: transparent; border: none; color: #a8b2c0; padding: 6px;
+  font-size: 14px; line-height: 1; cursor: pointer; border-radius: 4px;
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+}
+.action-icon:hover { color: #00aeff; background-color: rgba(0, 174, 255, 0.1); }
 .action-icon.remove-icon:hover,
 .remove-gallery-item-btn.action-icon:hover,
 .remove-section-btn.action-icon:hover,
 .remove-pro-item.action-icon:hover,
-.remove-cons-item.action-icon:hover { /* ... (same as v2.7) ... */ }
+.remove-cons-item.action-icon:hover,
+.thumbnail-actions .btn-remove-thumbnail.action-icon:hover,
+.section-image-actions .btn-remove-section-image.action-icon:hover {
+  color: #ff8a80; background-color: rgba(255, 138, 128, 0.15);
+}
+.thumbnail-actions .btn-change-thumbnail.action-icon:hover,
+.section-image-actions .btn-change-edit-section-image.action-icon:hover,
+.gallery-item-actions .edit-gallery-item-btn.action-icon:hover {
+    background-color: #007bff; color: #fff;
+}
 
 
 /* --- ARTICLE THUMBNAIL - POLAROID STYLE & DROPZONE-FIRST --- */
 .thumbnail-module { margin-top: 10px; margin-bottom: 25px; position: relative; width: 198px; }
 .thumbnail-dropzone-area {
-  width: 100%; height: 198px; background: #202327; border: 2px dashed #525a63;
+  width: 100%; min-height: 198px; /* Adjusted to ensure space for text and potential preview */
+  background: #202327; border: 2px dashed #525a63;
   border-radius: 6px; padding: 8px; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center;
   cursor: pointer; transition: all 0.2s ease-in-out; position: relative;
 }
 .thumbnail-dropzone-area:hover,
-.thumbnail-dropzone-area.dragover-section { border-color: #0095ff; background-color: rgba(0, 149, 255, 0.05); }
-
+.thumbnail-dropzone-area.dragover { 
+    border-color: #0095ff; background-color: rgba(0, 149, 255, 0.05);
+}
 .thumbnail-dropzone-area.no-image .dropzone-placeholder-text { display: block; color: #a8b2c0; font-size: 13px; }
 .thumbnail-dropzone-area.has-image .dropzone-placeholder-text { display: none; }
 
@@ -122,11 +195,8 @@ input[type="checkbox"] { /* ... (same as v2.7) ... */}
 .thumbnail-dropzone-area.has-image .thumbnail-actions { display: flex; }
 .thumbnail-actions .action-icon {
     background-color: rgba(30, 32, 35, 0.75); color: #fff; border-radius: 50%;
-    width: 28px; height: 28px; font-size: 12px; /* Smaller icons for thumbnail */
+    width: 28px; height: 28px; font-size: 12px;
 }
-.thumbnail-actions .action-icon:hover { background-color: #007bff; }
-.thumbnail-actions .btn-remove-thumbnail.action-icon:hover { background-color: #c82333; }
-
 
 /* --- TAGS (from v2.7) --- */
 /* ... styles largely okay ... */
@@ -137,87 +207,163 @@ input[type="checkbox"] { /* ... (same as v2.7) ... */}
   margin-bottom: 25px; border-radius: 6px; position: relative;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
-.modular-section:last-child { margin-bottom: 0; }
-.modular-section h3 {
-  font-size: 15px; color: #d0d5db; margin-top: 0; margin-bottom: 20px;
-  padding-bottom: 10px; border-bottom: 1px solid #383c42; font-weight: 500;
-}
-.drag-handle.action-icon {
-  position: absolute; left: -15px; top: 15px;
-  color: #888e95; background-color: #202327; border: 1px solid #383c42;
-  width: 32px; height: 32px; font-size: 16px;
-}
-.remove-section-btn.action-icon {
-  position: absolute; right: 15px; top: 15px;
-}
+/* ... (h3, drag-handle, remove-section-btn styles from v2.7) ... */
 
 /* Image Section - Dropzone First */
 .section-image-module { position: relative; }
 .section-image-interactive-area {
-  width: 100%; max-width: 350px; min-height: 200px; /* Increased min-height */
+  width: 100%; max-width: 350px; min-height: 200px;
   background: #202327; border: 2px dashed #525a63; border-radius: 6px;
   padding: 10px; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center;
   cursor: pointer; transition: all 0.2s ease-in-out;
   margin-bottom: 10px; position: relative;
 }
-/* ... (rest of image section styles from v2.7 are good) ... */
-.section-image-actions {
-  position: absolute; top: 8px; right: 8px; /* Position on top of preview */
-  display: none; gap: 6px;
-  background-color: rgba(42, 46, 51, 0.7); 
-  padding: 6px; border-radius: 4px;
+.section-image-interactive-area:hover,
+.section-image-interactive-area.dragover { 
+  border-color: #0095ff; background-color: rgba(0, 149, 255, 0.05);
 }
-.section-image-interactive-area.has-image:hover .section-image-actions { display: flex; }
+.section-image-interactive-area.no-image .dropzone-placeholder-text { display: flex; align-items:center; justify-content:center; flex-direction:column; color: #a8b2c0; font-size: 14px; }
+.section-image-interactive-area.no-image .dropzone-placeholder-text i {font-size: 24px; margin-bottom: 10px;}
+.section-image-interactive-area.has-image .dropzone-placeholder-text { display: none; }
+
+.section-image-interactive-area.has-image {
+  background: #2b2e36; border-style: solid; border-color: #40454c; padding: 8px;
+}
+.section-image-interactive-area.has-image:hover { border-color: #007bff; }
+
+.section-image-interactive-area .section-image-preview-container {
+  width: calc(100% - 16px); height: 150px; background-color: #1c1e22;
+  border-radius: 4px; margin-bottom: 8px; display: none;
+  align-items: center; justify-content: center; overflow: hidden;
+}
+.section-image-interactive-area.has-image .section-image-preview-container { display: flex; }
+.section-image-preview { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+
+.section-image-interactive-area.no-image .section-image-info.media-item-title { display: none; }
+.section-image-interactive-area.has-image .section-image-info.media-item-title {
+  display: block; font-size: 13px; text-align: center; color: #e1e1e1; width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-top: 4px;
+}
+.section-image-actions {
+  position: absolute; top: 8px; right: 8px; display: none; gap: 6px;
+  background-color: rgba(42, 46, 51, 0.7); padding: 6px; border-radius: 4px;
+}
+/* Show actions when the main dropzone area (which contains the preview) is hovered, only if it has an image */
+.section-image-interactive-area.has-image:hover .section-image-actions { display: flex; } 
+.section-image-actions .action-icon { background-color: transparent; color: #ccc; }
 
 
 /* Gallery Section Dropzone */
 .section-gallery-controls .dropzone-gallery {
   border: 2px dashed #525a63; padding: 35px 20px; text-align: center; color: #a8b2c0;
   background-color: #202327; border-radius: 4px; margin-top: 0; font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
 }
-/* ... (rest of gallery styles from v2.7 are good) ... */
+.section-gallery-controls .dropzone-gallery i {font-size: 24px; margin-bottom: 10px;}
+.section-gallery-controls .dropzone-gallery:hover,
+.section-gallery-controls .dropzone-gallery.dragover {
+  border-color: #0095ff; background-color: rgba(0, 149, 255, 0.05); color: #0095ff;
+}
+.gallery-preview-container .gallery-empty-placeholder { color: #666b71; font-style: italic; font-size: 13px; text-align: center; width: 100%; padding: 20px 0; }
+.gallery-item-preview .gallery-item-actions { display:flex; gap: 5px; margin-top: 8px; justify-content: center;}
+
 
 /* Pros & Cons Section */
 .btn-add-pro, .btn-add-con { background: #007bff; border-color: #0069d9; width: 28px; height: 28px; font-size: 16px; line-height: 26px; }
-.btn-add-pro i, .btn-add-con i { margin-right: 0; } /* Center icon */
-/* ... (rest of pros/cons styles from v2.7 are good) ... */
+.btn-add-pro i, .btn-add-con i { margin-right: 0; }
+.remove-pro-item.action-icon, .remove-cons-item.action-icon { font-size: 18px; padding: 3px 6px;}
+.icon-pros i, .icon-cons i { font-size: 18px; }
 
 /* --- SOURCES SECTION (Restored) --- */
 #sources-section .source {
-    background: #202327; border: 1px solid #383c42; padding: 20px; /* More padding */
-    margin-bottom: 15px; border-radius: 4px;
+    background: #202327; border: 1px solid #383c42; padding: 20px;
+    margin-bottom: 15px; border-radius: 4px; position:relative;
 }
 #sources-section .source label { margin-top: 10px; }
 #sources-section .source label:first-of-type { margin-top: 0; }
-#sources-section .source .remove-source.action-icon { /* Style as icon button */
-    background-color: transparent;
-    color: #9098a1;
-    padding: 5px;
-    border: none;
-    float: right; /* Position to the right */
+#sources-section .source .remove-source.action-icon {
+    position:absolute; top:15px; right:15px;
+    background-color: transparent; color: #9098a1; padding: 5px; border: none;
 }
-#sources-section .source .remove-source.action-icon:hover {
-    color: #ff8a80;
-    background-color: rgba(255, 138, 128, 0.15);
-}
-#add-source-btn { background-color: #5bc0de; border-color: #46b8da; } /* Keep as info blue */
-#add-source-btn:hover { background-color: #31b0d5; border-color: #269abc;}
+#add-source-btn { background-color: #4a525a; border-color: #40464c; } /* Match secondary */
+#add-source-btn:hover { background-color: #586069; border-color: #4a525a;}
+#add-source-btn i { margin-right: 6px; }
 
 
-/* --- RIGHT MEDIA PANELS (from v2.7) --- */
-/* ... styles largely okay, ensure filter styling is good ... */
-#global-media-library .media-filters {
-    padding: 10px 0px 15px 0px; background-color: transparent;
-    border-radius: 0; margin-bottom: 15px; gap: 10px 15px;
-    border-bottom: 1px solid #3c3f44;
+/* --- RIGHT MEDIA PANELS --- */
+/* ... styles from v2.7 ... */
+#global-media-library .media-filters label.checkbox-label { line-height: 1.5; }
+
+
+.action-icon {
+  /* ... (existing from v2.8) ... */
+  display: inline-flex; /* Crucial for centering icon content */
+  align-items: center;
+  justify-content: center;
 }
-#global-media-library .media-filters label {
-    margin: 0; font-size: 12px; color: #a8b2c0; font-weight: normal; text-transform: none; line-height: 34px;
+.action-icon i {
+  margin-right: 0 !important; /* Remove any default Font Awesome margin if it's pushing icon off-center */
+  line-height: 1; /* Helps with vertical centering of icon itself */
 }
-#global-media-library .media-filters input[type="text"],
-#global-media-library .media-filters select {
-    padding: 8px 10px; height: 34px; margin: 0; font-size: 13px; min-width: 150px;
-    background-color: #1c1e22; border: 1px solid #40454c; color: #e8e8e8;
+
+
+/* --- ARTICLE THUMBNAIL - POLAROID STYLE & DROPZONE-FIRST (v2.8 base with fixes) --- */
+.thumbnail-module { margin-top: 10px; margin-bottom: 25px; position: relative; width: 198px; }
+.thumbnail-dropzone-area {
+  width: 100%; min-height: 198px; background: #202327; border: 2px dashed #525a63;
+  border-radius: 6px; padding: 8px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  cursor: pointer; transition: all 0.2s ease-in-out; position: relative;
 }
-#global-media-library .media-filters input[type="checkbox"] { vertical-align: middle; }
+.thumbnail-dropzone-area:hover,
+.thumbnail-dropzone-area.dragover { 
+    border-color: #0095ff; background-color: rgba(0, 149, 255, 0.05);
+}
+.thumbnail-dropzone-area.no-image .dropzone-placeholder-text { display: block; color: #a8b2c0; font-size: 13px; }
+.thumbnail-dropzone-area.has-image .dropzone-placeholder-text { display: none; }
+
+.thumbnail-dropzone-area.has-image {
+  background: #2b2e36; border: 1px solid #444; box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  justify-content: flex-start; cursor: pointer;
+}
+.thumbnail-dropzone-area.has-image:hover { border-color: #007bff; }
+
+.thumbnail-preview-container {
+  width: calc(100% - 16px); /* Account for 8px padding on each side of .thumbnail-dropzone-area.has-image */
+  height: 140px; 
+  background-color: #1c1e22; border-radius: 4px; margin-bottom: 8px;
+  display: none; /* JS will show it */
+  align-items: center; /* Vertically center image */
+  justify-content: center; /* Horizontally center image */
+  overflow: hidden;
+}
+.thumbnail-dropzone-area.has-image .thumbnail-preview-container { display: flex; }
+#articleThumbnailPreview { 
+  max-width: 100%; max-height: 100%; object-fit: contain; display: block; 
+}
+
+.thumbnail-dropzone-area.no-image #thumbnailInfo.media-item-title { display: none; }
+.thumbnail-dropzone-area.has-image #thumbnailInfo.media-item-title {
+  display: block; font-size: 13px; text-align: center; color: #e1e1e1; width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-top: 6px;
+}
+
+.thumbnail-actions {
+  position: absolute; top: 4px; right: 4px; /* Adjusted for tighter fit within polaroid padding */
+  display: none; gap: 4px; /* Smaller gap */
+}
+.thumbnail-dropzone-area.has-image .thumbnail-actions { display: flex; }
+.thumbnail-actions .action-icon {
+    background-color: rgba(30, 32, 35, 0.7); /* Slightly less opaque */
+    color: #fff; border-radius: 50%; /* Circular */
+    width: 26px; height: 26px; /* Slightly smaller */
+    font-size: 11px; /* Smaller icon */
+    /* display: inline-flex; align-items: center; justify-content: center; are inherited */
+}
+.thumbnail-actions .action-icon i {
+    line-height: 26px; /* Match button height for vertical centering if needed */
+    /* margin-right: 0 !important; is inherited */
+}
+.thumbnail-actions .action-icon:hover { background-color: #007bff; }
+.thumbnail-actions .btn-remove-thumbnail.action-icon:hover { background-color: #c82333; }

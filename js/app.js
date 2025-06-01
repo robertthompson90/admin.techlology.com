@@ -24,7 +24,7 @@ $(document).ready(function(){
   ];
 
   if (typeof Notifications !== "undefined" && typeof Notifications.init === "function") {
-    Notifications.init();
+    Notifications.init(); // Assuming it might have an init method
   } else if (typeof Notifications !== "undefined" && Notifications.show) {
     console.log("[Notifications] module available (show function exists).");
   } else {
@@ -43,27 +43,27 @@ $(document).ready(function(){
 
     // Contextual Initialization
     if (moduleName === "TagSystem") {
-      if (onAddArticlePage) {
+      if (onAddArticlePage) { // Only on addarticle page
         if (typeof window.TagSystem !== 'undefined' && typeof window.TagSystem.init === 'function') {
           try {
             window.TagSystem.init({
               itemType: 'article', 
-              itemId: null, // For new articles
-              inputSelector: '#tags-input-field', 
-              listSelector: '#selected-tags-container',
+              itemId: null, // For new articles, itemId is initially null
+              inputSelector: '#tags-input-field', // Correct ID from addarticle.php v1.4+
+              listSelector: '#selected-tags-container', // Correct ID
               addTagOnBlur: true
             });
             console.log("[TagSystem] initialized for addarticle.php.");
           } catch (e) { console.error("Error initializing [TagSystem] for addarticle.php:", e); }
-        } else { console.warn("[TagSystem] module not found for addarticle.php."); }
+        } else { console.warn("[TagSystem] module not found or init function missing for addarticle.php."); }
       }
-      // TagSystem for UIE is initialized by UIE itself when it sets context.
-      // No generic init for media-library-page here for TagSystem.
+      // TagSystem for UIE is initialized by UIE itself when it sets context via TagSystem.setItemContext.
+      // No generic init for media-library-page here for TagSystem unless it has a global non-item-specific mode.
       return; 
     }
     
     if (moduleName === "Sources") {
-        if (onAddArticlePage && $('#sources-section').length > 0) { // Only init if sources section exists
+        if (onAddArticlePage && $('#sources-section').length > 0) { // Only init if sources section exists on the page
             if (typeof window.Sources !== 'undefined' && typeof window.Sources.init === 'function') {
                 try { window.Sources.init(); console.log("[Sources] initialized for addarticle.php."); }
                 catch (e) { console.error("Error initializing module [Sources]:", e); }
@@ -88,7 +88,7 @@ $(document).ready(function(){
                 // Only init if we have a known page context for media library
                 if (mediaLibOptions.targetPage) {
                     window.MediaLibrary.init(mediaLibOptions);
-                    console.log(`[MediaLibrary] initialized for ${mediaLibOptions.targetPage}.`);
+                    // console.log(`[MediaLibrary] initialized for ${mediaLibOptions.targetPage}.`);
                 } else {
                     // console.log("[MediaLibrary] Not on a page requiring MediaLibrary init (addarticle or medialibrary).");
                 }
@@ -126,6 +126,7 @@ $(document).ready(function(){
           }
       }
       if (isCriticalOnThisPage && moduleName !== "UnifiedImageEditor") { 
+          // UnifiedImageEditor has no init(), it's called directly.
           console.warn(`[${moduleName}] module not found or init function missing. This WILL affect functionality on ${pageContext}.`);
       }
     }

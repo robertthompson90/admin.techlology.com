@@ -5,8 +5,12 @@
 var Sources = (function($){
   
   function checkSourceCompletion(){
-    var $sources = $("#sources-container .source");
+    var $sourcesContainer = $("#sources-container");
+    if (!$sourcesContainer.length) return; // No sources section on page
+
+    var $sources = $sourcesContainer.find(".source");
     var $addBtn = $("#add-source-btn");
+    if (!$addBtn.length) return;
 
     if ($sources.length === 0) {
         $addBtn.show(); 
@@ -25,11 +29,12 @@ var Sources = (function($){
     } else {
       $addBtn.hide();
     }
-    $(document).trigger("source:updated");
+    $(document).trigger("source:updated"); // For autosave
   }
   
   function createNewSourceBlock(isFirstSource = false) {
     var $sourceDiv = $("<div></div>").addClass("source");
+    // Inputs are not 'required' by default, making the section optional.
     $sourceDiv.html(
        '<label>Source Title:</label>' +
        '<input type="text" name="source_title[]" placeholder="e.g., Article Name">' + 
@@ -42,14 +47,17 @@ var Sources = (function($){
     
     $sourceDiv.find(".remove-source").on("click", function(){
        var $parentSourceBlock = $(this).closest(".source");
-       if ($("#sources-container .source").length > 1 || 
+       var $sourcesContainer = $("#sources-container"); // Re-select for current state
+
+       if ($sourcesContainer.find(".source").length > 1 || 
            ($parentSourceBlock.find("input[name='source_title[]']").val().trim() !== "" ||
             $parentSourceBlock.find("input[name='source_url[]']").val().trim() !== "") ) {
           $parentSourceBlock.remove();
-          if ($("#sources-container .source").length === 0) {
-              $("#sources-container").append(createNewSourceBlock(true));
+          if ($sourcesContainer.find(".source").length === 0) {
+              $sourcesContainer.append(createNewSourceBlock(true));
           }
        } else {
+          // Clear fields of the last empty block instead of removing it, effectively resetting it.
           $parentSourceBlock.find("input, textarea").val("");
        }
        checkSourceCompletion();
@@ -59,45 +67,51 @@ var Sources = (function($){
   }
 
   function initSources(){
-    if ($("#sources-container").length === 0 && $("#add-source-btn").length === 0) {
-        // console.log("[Sources] Sources section not found on this page. Skipping init.");
+    var $sourcesContainer = $("#sources-container");
+    if (!$sourcesContainer.length && !$("#add-source-btn").length) {
+        // console.log("[Sources] Sources section elements not found. Skipping init.");
         return; 
     }
 
-    if ($("#sources-container .source").length === 0) {
-        $("#sources-container").append(createNewSourceBlock(true));
+    // If #sources-container is empty on init (e.g. new article, or after autosave restore cleared it), add one optional block.
+    if ($sourcesContainer.find(".source").length === 0) {
+        $sourcesContainer.append(createNewSourceBlock(true)); // Mark as first for potential logic
     } else {
-        $("#sources-container .source .remove-source").off('click').on("click", function(){
+        // Bind remove event to any existing source blocks (e.g., from autosave restore)
+        $sourcesContainer.find(".source .remove-source").off('click').on("click", function(){ // Ensure events aren't double-bound
             var $parentSourceBlock = $(this).closest(".source");
+            // Re-check current number of sources within the click handler's scope
             if ($("#sources-container .source").length > 1 || 
                 ($parentSourceBlock.find("input[name='source_title[]']").val().trim() !== "" ||
                  $parentSourceBlock.find("input[name='source_url[]']").val().trim() !== "") ) {
                $parentSourceBlock.remove();
-               if ($("#sources-container .source").length === 0) {
+               if ($("#sources-container .source").length === 0) { // Check again after removal
                   $("#sources-container").append(createNewSourceBlock(true));
                }
             } else {
+               // If it's the last one and it's empty, just clear its fields
                $parentSourceBlock.find("input, textarea").val("");
             }
             checkSourceCompletion();
-            $('#article-form').trigger('input');
+            $('#article-form').trigger('input'); // For autosave
         });
     }
-    checkSourceCompletion();
+    checkSourceCompletion(); // Initial check for the "Add Source" button visibility
 
-    $("#sources-container").on("input", "input[name='source_title[]'], input[name='source_url[]']", function(){
-      checkSourceCompletion();
+    // Re-bind delegated input listener to container
+    $sourcesContainer.off("input.sources").on("input.sources", "input[name='source_title[]'], input[name='source_url[]']", function(){
+      checkSourceCompletion(); // Re-check when user types in the last block
     });
     
     $("#add-source-btn").off('click').on("click", function(){
       var $newSourceBlock = createNewSourceBlock();
-      $("#sources-container").append($newSourceBlock);
+      $sourcesContainer.append($newSourceBlock);
       $newSourceBlock.find("input[name='source_title[]']").focus();
-      checkSourceCompletion();
-      $(document).trigger("source:added", [$newSourceBlock]);
-      $('#article-form').trigger('input');
+      checkSourceCompletion(); // This will hide the "Add Source" button as new one is empty
+      $(document).trigger("source:added", [$newSourceBlock]); // For autosave if needed
+      $('#article-form').trigger('input'); // For autosave
     });
-    // console.log("[Sources] Initialized for addarticle.php (if #sources-section exists).");
+    // console.log("[Sources] Initialized (if #sources-section exists).");
   }
   
   return {

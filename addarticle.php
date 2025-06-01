@@ -1,14 +1,14 @@
 <?php
 // addarticle.php
-// Version 1.4 - Removed HTML comments, "optional" from Sources header,
-//               Adjusted Thumbnail for dropzone-first, ensured 3 steps for FormNavigation.
+// Version 1.5.1 - Added Cropper.js script include before UIE.js.
 include 'inc/loginanddb.php';
 
 $sectionQuery = $db->query("SELECT id, name FROM section_types ORDER BY id");
 $sectionTypes = $sectionQuery->fetchAll(PDO::FETCH_ASSOC);
 
-$placeholderImagePath = "img/placeholder.png"; // Ensure this exists
-$placeholderSmallImagePath = "img/placeholder_small.png"; // Ensure this exists
+$php_placeholder_image_path = "img/placeholder.png"; 
+$php_placeholder_small_image_path = "img/placeholder_small.png";
+$php_loading_gif_path = "img/loading.gif";
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -57,7 +57,7 @@ $placeholderSmallImagePath = "img/placeholder_small.png"; // Ensure this exists
           <label>Article Thumbnail:</label>
           <div class="thumbnail-module">
             <div class="thumbnail-dropzone-area dropzone section-specific-dropzone no-image" data-target-type="thumbnail" title="Click, Drop, or Paste Image for Thumbnail">
-                <div class="thumbnail-preview-container" style="display:none;"> {/* Initially hidden */}
+                <div class="thumbnail-preview-container">
                     <img src="" alt="Thumbnail Preview" id="articleThumbnailPreview">
                 </div>
                 <span id="thumbnailInfo" class="media-item-title dropzone-placeholder-text">Click, Drop, or Paste Thumbnail</span>
@@ -117,16 +117,14 @@ $placeholderSmallImagePath = "img/placeholder_small.png"; // Ensure this exists
       
       <div class="form-step" id="step-3" data-step-title="Sources &amp; Save">
         <div class="card" id="sources-section">
-          <h2>Sources &amp; Citations</h2> {/* "Optional" removed */}
+          <h2>Sources &amp; Citations</h2>
           <div id="sources-container">
-            {/* js/sources.js will add the first source block if this is empty, or restore. */}
-            {/* Inputs should not have 'required' by default if section is optional */}
           </div>
-          <button type="button" id="add-source-btn" class="btn btn-secondary">Add Source</button>
+          <button type="button" id="add-source-btn" class="btn btn-secondary"><i class="fas fa-plus-circle"></i> Add Source</button>
         </div>
         <div class="card">
           <h2>Final Actions</h2>
-          <button type="button" id="preview-button" class="btn btn-secondary">Preview Article</button>
+          <button type="button" id="preview-button" class="btn btn-secondary"><i class="fas fa-eye"></i> Preview Article</button>
           <input type="submit" value="Save Article" class="btn">
         </div>
         <div class="nav-buttons">
@@ -170,11 +168,13 @@ $placeholderSmallImagePath = "img/placeholder_small.png"; // Ensure this exists
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" crossorigin="anonymous"></script>
 <script>
-  var G_PLACEHOLDER_IMAGE_PATH = "<?php echo htmlspecialchars($placeholderImagePath, ENT_QUOTES, 'UTF-8'); ?>";
-  var G_PLACEHOLDER_SMALL_IMAGE_PATH = "<?php echo htmlspecialchars($placeholderSmallImagePath, ENT_QUOTES, 'UTF-8'); ?>";
+  var G_PLACEHOLDER_IMAGE_PATH = "<?php echo htmlspecialchars($php_placeholder_image_path, ENT_QUOTES, 'UTF-8'); ?>";
+  var G_PLACEHOLDER_SMALL_IMAGE_PATH = "<?php echo htmlspecialchars($php_placeholder_small_image_path, ENT_QUOTES, 'UTF-8'); ?>";
+  var G_LOADING_GIF_PATH = "<?php echo htmlspecialchars($php_loading_gif_path, ENT_QUOTES, 'UTF-8'); ?>";
 </script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" crossorigin="anonymous"></script>
 
 <script src="js/notifications.js?v=<?php echo filemtime('js/notifications.js'); ?>"></script>
 <script src="js/globalErrorHandler.js?v=<?php echo filemtime('js/globalErrorHandler.js'); ?>"></script>
