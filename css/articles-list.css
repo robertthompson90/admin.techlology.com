@@ -1,0 +1,32 @@
+.articles-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+.articles-controls .input {
+  background: #23262b;
+  color: #e0e0e0;
+  border: 1.5px solid #353942;
+  border-radius: 5px;
+  padding: 7px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border 0.13s;
+}
+.articles-controls .input:focus {
+  border-color: #00aeff;
+}
+.tag {
+  display: inline-block;
+  background: #1c1f23;
+  color: #00aeff;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 13px;
+  margin-right: 4px;
+  margin-bottom: 2px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}

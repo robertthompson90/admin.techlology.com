@@ -2088,3 +2088,6 @@ const openEditor = async (physicalImgUrl, assetDataObj, saveCb, closedCb, option
     // getFinalProcessedImageDataUrl, // If needed externally for some reason
   };
 })();
+
+// Make the editor globally accessible
+window.UnifiedImageEditor = UnifiedImageEditor;

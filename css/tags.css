@@ -1,0 +1,20 @@
+.tags-controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 18px;
+  align-items: center;
+}
+.tags-controls .input {
+  background: #23262b;
+  color: #e0e0e0;
+  border: 1.5px solid #353942;
+  border-radius: 5px;
+  padding: 7px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  transition: border 0.13s;
+}
+.tags-controls .input:focus {
+  border-color: #00aeff;
+}

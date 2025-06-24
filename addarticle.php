@@ -18,9 +18,9 @@ $php_loading_gif_path = "img/loading.gif";
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
   <link href="css/global.css?v=<?php echo filemtime('css/global.css'); ?>" rel="stylesheet" type="text/css">
-  <link href="css/addarticle.css?v=<?php echo filemtime('css/addarticle.css'); ?>" rel="stylesheet" type="text/css">
+  <link href="css/addarticle.css" rel="stylesheet" type="text/css">
   <link href="css/medialibrary.css?v=<?php echo filemtime('css/medialibrary.css'); ?>" rel="stylesheet" type="text/css">
-  <link href="css/unifiedimageeditor.css?v=<?php echo filemtime('css/unifiedimageeditor.css'); ?>" rel="stylesheet" type="text/css">
+  <link href="css/unifiedimageeditor.css" rel="stylesheet" type="text/css">
   
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
@@ -56,19 +56,23 @@ $php_loading_gif_path = "img/loading.gif";
           
           <label>Article Thumbnail:</label>
           <div class="thumbnail-module">
-            <div class="thumbnail-dropzone-area dropzone section-specific-dropzone no-image" data-target-type="thumbnail" title="Click, Drop, or Paste Image for Thumbnail">
-                <div class="thumbnail-preview-container">
-                    <img src="" alt="Thumbnail Preview" id="articleThumbnailPreview">
+            <div class="unified-dropzone thumbnail-dropzone-area">
+                <div class="dropzone-placeholder-text">
+                    <i class="fas fa-image"></i>
+                    Click, drop, or paste an image for the article thumbnail.
                 </div>
-                <span id="thumbnailInfo" class="media-item-title dropzone-placeholder-text">Click, Drop, or Paste Thumbnail</span>
-            </div>
-            <div class="thumbnail-actions" style="display:none;">
-                <button type="button" id="changeEditThumbnailBtn" class="btn btn-change-thumbnail action-icon" title="Change/Edit Thumbnail"><i class="fas fa-edit"></i></button>
-                <button type="button" id="removeThumbnailBtn" class="btn btn-remove-thumbnail action-icon" title="Remove Thumbnail"><i class="fas fa-trash-alt"></i></button>
+                <div class="dropzone-preview-container">
+                    <img class="dropzone-preview-img" src="" alt="Thumbnail Preview">
+                </div>
+                <div class="dropzone-info media-item-title" id="thumbnailInfo"></div>
+                <div class="dropzone-actions thumbnail-actions">
+                    <button class="action-icon btn-change-thumbnail" id="changeEditThumbnailBtn" title="Change/Edit"><i class="fas fa-edit"></i></button>
+                    <button class="action-icon btn-remove-thumbnail" id="removeThumbnailBtn" title="Remove"><i class="fas fa-trash"></i></button>
+                </div>
+                <input type="hidden" id="thumbnail_media_asset_id" name="thumbnail_media_asset_id" value="">
+                <input type="hidden" id="thumbnail_media_variant_id" name="thumbnail_media_variant_id" value="">
             </div>
           </div>
-          <input type="hidden" name="thumbnail_media_asset_id" id="thumbnail_media_asset_id" value="">
-          <input type="hidden" name="thumbnail_media_variant_id" id="thumbnail_media_variant_id" value="">
         </div>
 
         <div class="card">
@@ -176,13 +180,13 @@ $php_loading_gif_path = "img/loading.gif";
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js" crossorigin="anonymous"></script>
 
-<script src="js/notifications.js?v=<?php echo filemtime('js/notifications.js'); ?>"></script>
-<script src="js/globalErrorHandler.js?v=<?php echo filemtime('js/globalErrorHandler.js'); ?>"></script>
-<script src="js/UnifiedImageEditor.js?v=<?php echo filemtime('js/UnifiedImageEditor.js'); ?>"></script>
-<script src="js/mediaUpload.js?v=<?php echo filemtime('js/mediaUpload.js'); ?>"></script>
+<script src="js/notifications.js"></script>
+<script src="js/globalErrorHandler.js"></script>
+<script src="js/UnifiedImageEditor.js"></script>
+<script src="js/mediaUpload.js"></script>
+<script src="js/dropzones.js"></script>
 <script src="js/mediaLibrary.js?v=<?php echo filemtime('js/mediaLibrary.js'); ?>"></script>
 <script src="js/sections.js?v=<?php echo filemtime('js/sections.js'); ?>"></script>
-<script src="js/dropzones.js?v=<?php echo filemtime('js/dropzones.js'); ?>"></script>
 <script src="js/tags.js?v=<?php echo filemtime('js/tags.js'); ?>"></script>
 <script src="js/sources.js?v=<?php echo filemtime('js/sources.js'); ?>"></script>
 <script src="js/lightbox.js?v=<?php echo filemtime('js/lightbox.js'); ?>"></script>

@@ -226,3 +226,25 @@ var Sections = (function($){
     RATING_SECTION: RATING_SECTION
   };
 })(jQuery);
+
+// When rendering a new section:
+function renderSection(sectionType, sectionData) {
+    // ...existing code...
+    if (sectionType === 'image') {
+        // Use unified dropzone markup and classes
+        // <div class="modular-section">
+        //   <div class="section-header">Image Section</div>
+        //   <div class="unified-dropzone section-image-interactive-area no-image">...</div>
+        //   ...fields...
+        // </div>
+    }
+    if (sectionType === 'gallery') {
+        // Use unified dropzone markup and classes
+        // <div class="modular-section">
+        //   <div class="section-header">Gallery Section</div>
+        //   <div class="unified-dropzone dropzone-gallery no-image">...</div>
+        //   ...fields...
+        // </div>
+    }
+    // ...other section types...
+}

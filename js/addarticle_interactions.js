@@ -74,9 +74,9 @@ $(document).ready(function() {
     function getPreviewUrlForAsset(asset, variant) {
         if (variant && variant.preview_image_url) return variant.preview_image_url;
         if (asset && asset.preview_image_url) return asset.preview_image_url;
-        if (variant && variant.dataURL) return variant.dataURL; 
-        if (asset && asset.dataURL) return asset.dataURL;     
+        if (variant && variant.image_url) return variant.image_url;
         if (asset && asset.image_url) return asset.image_url;
+        if (asset && asset.file_path) return asset.file_path;
         return placeholderImgPathGlobal;
     }
 
@@ -88,7 +88,29 @@ $(document).ready(function() {
     }
 
     window.resetArticleImageTargetContextGlobal = function() { /* ... (same as v1.7.4) ... */ };
-    window.openUIEForArticleContextGlobal = function(mediaAsset, targetContextDetails, uieOptions = {}) { /* ... (same as v1.7.4) ... */ };
+    window.openUIEForArticleContextGlobal = function(mediaAsset, targetContextDetails, uieOptions = {}) {
+        if (!window.UnifiedImageEditor || typeof UnifiedImageEditor.openEditor !== "function") {
+            Notifications.show("Unified Image Editor is not available.", "error");
+            return;
+        }
+        UnifiedImageEditor.openEditor(
+            mediaAsset.image_url || mediaAsset.file_path, // physicalImgUrl
+            mediaAsset,                                   // assetDataObj
+            function(finalMasterAsset, finalVariantIfAny) { // onSave callback
+                if (targetContextDetails && typeof targetContextDetails.updateCallback === "function") {
+                    targetContextDetails.updateCallback(finalMasterAsset, finalVariantIfAny);
+                }
+                if (window.MediaLibrary && typeof MediaLibrary.loadMedia === "function") {
+                    MediaLibrary.loadMedia();
+                }
+                if (typeof window.resetArticleImageTargetContextGlobal === "function") {
+                    window.resetArticleImageTargetContextGlobal();
+                }
+            },
+            null, // onClosed callback (optional)
+            uieOptions
+        );
+    };
     
     function openMediaPickerForArticleContext(options = {}) {
         const targetType = window.currentArticleImageTarget.type;
@@ -130,37 +152,66 @@ $(document).ready(function() {
     function setupThumbnailInteraction() {
         const $thumbnailModule = $('.thumbnail-module').first();
         if (!$thumbnailModule.length) return;
-        const $dropzoneArea = $thumbnailModule.find('.thumbnail-dropzone-area');
+        const $dropzoneArea = $thumbnailModule.find('.unified-dropzone.thumbnail-dropzone-area');
         const $previewContainer = $thumbnailModule.find('.thumbnail-preview-container');
-        const $previewImg = $thumbnailModule.find('#articleThumbnailPreview');
-        const $infoTextSpan = $thumbnailModule.find('#thumbnailInfo'); 
-        const $actionsDiv = $thumbnailModule.find('.thumbnail-actions');
+        const $previewImg = $thumbnailModule.find('.dropzone-preview-img');
+        const $infoTextSpan = $thumbnailModule.find('.dropzone-info');
+        const $actionsDiv = $thumbnailModule.find('.dropzone-actions.thumbnail-actions');
         const $removeBtn = $thumbnailModule.find('#removeThumbnailBtn');
         const $changeEditBtn = $thumbnailModule.find('#changeEditThumbnailBtn');
 
         $dropzoneArea.data('updateDisplayFunction', updateThumbnailDisplay);
 
-        function updateThumbnailDisplay(masterAsset, variant) {
-            // ... (Logic from v1.7.4 to update DOM based on masterAsset and variant) ...
-            let assetId = null, variantId = null, previewUrl = ""; 
-            let currentInfoText = 'Click, Drop, or Paste Thumbnail';
-            let hasImage = false;
-            if (masterAsset && masterAsset.id) { /* ... (Determine hasImage, assetId, variantId, previewUrl, currentInfoText) ... */ }
-            $('#thumbnail_media_asset_id').val(assetId || '');
-            $('#thumbnail_media_variant_id').val(variantId || '');
-            if (hasImage) { /* ... Show preview and actions ... */ } 
-            else { /* ... Show placeholder ... */ }
-            $('#article-form').trigger('input'); 
+        // Remove any previous click handlers to avoid double binding
+        $dropzoneArea.off('click.thumbnail').on('click.thumbnail', initiateThumbnailSelectionFlow);
+        $changeEditBtn.off('click.thumbnail').on('click.thumbnail', initiateThumbnailSelectionFlow);
 
-            if (hasImage && typeof MediaLibrary !== 'undefined' && MediaLibrary.loadMedia) {
-                console.log("[AddArticle] Thumbnail updated. Refreshing Media Library panel.");
-                MediaLibrary.loadMedia(); 
+        function updateThumbnailDisplay(masterAsset, variant) {
+            let assetId = masterAsset && masterAsset.id ? masterAsset.id : '';
+            let variantId = variant && variant.id ? variant.id : '';
+            let previewUrl = getPreviewUrlForAsset(masterAsset, variant);
+            let hasImage = !!assetId;
+
+            $('#thumbnail_media_asset_id').val(assetId);
+            $('#thumbnail_media_variant_id').val(variantId);
+            $('#articleThumbnailPreview').attr('src', previewUrl);
+
+            // --- Set the thumbnail title ---
+            let displayTitle = '';
+            if (masterAsset && (masterAsset.admin_title || masterAsset.title)) {
+                displayTitle = masterAsset.admin_title || masterAsset.title;
+            } else if (assetId) {
+                displayTitle = `Image ${assetId}`;
             }
+            $('#thumbnailInfo').text(displayTitle || 'No thumbnail selected.');
+
+            if (hasImage) {
+                $('.thumbnail-module .thumbnail-dropzone-area').removeClass('no-image').addClass('has-image');
+                $('.thumbnail-actions').show();
+                $('#thumbnailInfo').show();
+            } else {
+                $('.thumbnail-module .thumbnail-dropzone-area').addClass('no-image').removeClass('has-image');
+                $('.thumbnail-actions').hide();
+                $('#thumbnailInfo').show();
+                $('#articleThumbnailPreview').attr('src', placeholderImgPathGlobal);
+                $('#thumbnailInfo').text('Click, Drop, or Paste Thumbnail');
+            }
+            $('#article-form').trigger('input');
         }
 
+        // Only trigger upload dialog or UIE picker ONCE per click
         function initiateThumbnailSelectionFlow(event) {
+            // Prevent double dialog if both dropzone and edit button are clicked
             if ($(event.target).closest($removeBtn).length) { return; }
-            console.log("[AddArticle] Thumbnail interaction initiated via " + event.type);
+            // Prevent double dialog if already handling this click
+            if ($(event.target).is($changeEditBtn) || $(event.target).closest($changeEditBtn).length) {
+                event.stopPropagation();
+            }
+            // Only allow one dialog per click
+            if ($dropzoneArea.data('uploading')) return;
+            $dropzoneArea.data('uploading', true);
+            setTimeout(() => $dropzoneArea.data('uploading', false), 500);
+
             window.currentArticleImageTarget = {
                 type: 'thumbnail', instanceId: null, $targetElement: $dropzoneArea,
                 updateCallback: updateThumbnailDisplay
@@ -172,8 +223,6 @@ $(document).ready(function() {
                 openMediaPickerForArticleContext({ directlyTriggerUpload: true, allowMultipleForGallery: false }); 
             }
         }
-        $dropzoneArea.on('click', initiateThumbnailSelectionFlow);
-        $changeEditBtn.on('click', initiateThumbnailSelectionFlow);
         $removeBtn.on('click', function() {
             updateThumbnailDisplay(null, null); 
             if (window.currentArticleImageTarget && window.currentArticleImageTarget.type === 'thumbnail') {
@@ -184,11 +233,11 @@ $(document).ready(function() {
         
         if (typeof $().droppable === 'function') { 
             $dropzoneArea.droppable({ 
-                accept: "#global-media .global-media-item, #staging-media .polaroid-style-preview",
+                accept: ".global-media-item, .polaroid-style-preview, *",
                 hoverClass: "dropzone-hover-active",
                 drop: function(event, ui) {
                     const $draggedItem = ui.draggable;
-                    const draggedAssetData = $draggedItem.data('asset-data') || $draggedItem.data('dragged-asset-data');
+                    const draggedAssetData = $draggedItem && ($draggedItem.data('asset-data') || $draggedItem.data('dragged-asset-data'));
                     console.log("[AddArticle] Media item dropped on Thumbnail. Asset Data:", draggedAssetData);
                     if (draggedAssetData && draggedAssetData.id) {
                         window.currentArticleImageTarget = {
@@ -196,6 +245,26 @@ $(document).ready(function() {
                             updateCallback: updateThumbnailDisplay
                         };
                         fetchAssetAndOpenUIE(draggedAssetData.id, draggedAssetData.variant_id || null, window.currentArticleImageTarget);
+                        return;
+                    }
+                    // Native files
+                    const files = event.originalEvent && event.originalEvent.dataTransfer && event.originalEvent.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        if (files.length > 1) {
+                            Notifications.show("Only one image can be used for the thumbnail.", "warning");
+                            return;
+                        }
+                        window.currentArticleImageTarget = {
+                            type: 'thumbnail', instanceId: null, $targetElement: $(this),
+                            updateCallback: updateThumbnailDisplay
+                        };
+                        MediaUpload.processSingleFileForDrop(files[0], function(uploadResponse) {
+                            if (uploadResponse && uploadResponse.success && uploadResponse.media) {
+                                openUIEForArticleContextGlobal(uploadResponse.media, window.currentArticleImageTarget, {context: 'articleThumbnail', contextualUseButtonText: 'Use for Thumbnail'});
+                            } else {
+                                Notifications.show("Upload failed: " + (uploadResponse.error || "Unknown error"), "error");
+                            }
+                        });
                     }
                 }
             }); 
@@ -203,16 +272,221 @@ $(document).ready(function() {
     }
     if ($('.thumbnail-module').length) { setupThumbnailInteraction(); }
 
-    // --- IMAGE SECTION INTERACTIONS (Similar adaptations needed) ---
+    // --- IMAGE SECTION INTERACTIONS ---
     function setupImageSectionInteractions($sectionElement) {
-        // ... (Adapt click handler to call openMediaPickerForArticleContext({ directlyTriggerUpload: !assetId }); ) ...
-        // ... (Setup droppable for image sections) ...
+        const $dropzone = $sectionElement.find('.section-image-interactive-area');
+        if (!$dropzone.length) return;
+
+        // Initialize droppable if not already
+        if (!$dropzone.data('droppable-initialized')) {
+            $dropzone.droppable({
+                accept: '.global-media-item, .polaroid-style-preview',
+                hoverClass: 'dropzone-hover-active',
+                drop: function(event, ui) {
+                    const $draggedItem = ui.draggable;
+                    const draggedAssetData = $draggedItem.data('asset-data') || $(ui.helper).data('asset-data');
+                    console.log("[AddArticle] Image section received drop with asset data:", draggedAssetData);
+                    
+                    if (draggedAssetData && draggedAssetData.id) {
+                        window.currentArticleImageTarget = {
+                            type: 'sectionImage',
+                            instanceId: $sectionElement.data('section-instance-id'),
+                            $targetElement: $sectionElement,
+                            updateCallback: updateSectionImageDisplay
+                        };
+                        fetchAssetAndOpenUIE(draggedAssetData.id, draggedAssetData.variant_id || null, window.currentArticleImageTarget);
+                    }
+                }
+            }).data('droppable-initialized', true);
+        }
+        
+        $sectionElement.data('updateDisplayFunction', updateSectionImageDisplay);
+
+        $dropzone.off('click.sectionImage').on('click.sectionImage', function(e) {
+            window.currentArticleImageTarget = {
+                type: 'sectionImage',
+                instanceId: $sectionElement.data('section-instance-id'),
+                $targetElement: $sectionElement,
+                updateCallback: updateSectionImageDisplay
+            };
+            openMediaPickerForArticleContext({ directlyTriggerUpload: true });
+        });
+
+        // Drag-and-drop from media library, staging, or file explorer
+        if (typeof $().droppable === 'function') {
+            $dropzone.droppable({
+                accept: ".global-media-item, .polaroid-style-preview, *",
+                hoverClass: "dropzone-hover-active",
+                drop: function(event, ui) {
+                    // If dropped from media library/staging (jQuery UI draggable)
+                    const $draggedItem = ui.draggable;
+                    const draggedAssetData = $draggedItem && ($draggedItem.data('asset-data') || $draggedItem.data('dragged-asset-data'));
+                    if (draggedAssetData && draggedAssetData.id) {
+                        window.currentArticleImageTarget = {
+                            type: 'sectionImage',
+                            instanceId: $sectionElement.data('section-instance-id'),
+                            $targetElement: $sectionElement,
+                            updateCallback: updateSectionImageDisplay
+                        };
+                        fetchAssetAndOpenUIE(draggedAssetData.id, draggedAssetData.variant_id || null, window.currentArticleImageTarget);
+                        return;
+                    }
+                    // If dropped from file explorer (native files)
+                    const files = event.originalEvent && event.originalEvent.dataTransfer && event.originalEvent.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        if (files.length > 1) {
+                            Notifications.show("Only one image can be used for this section.", "warning");
+                            return;
+                        }
+                        window.currentArticleImageTarget = {
+                            type: 'sectionImage',
+                            instanceId: $sectionElement.data('section-instance-id'),
+                            $targetElement: $sectionElement,
+                            updateCallback: updateSectionImageDisplay
+                        };
+                        MediaUpload.processSingleFileForDrop(files[0], function(uploadResponse) {
+                            if (uploadResponse && uploadResponse.success && uploadResponse.media) {
+                                openUIEForArticleContextGlobal(uploadResponse.media, window.currentArticleImageTarget, {context: 'articleSectionImage', contextualUseButtonText: 'Use for Section'});
+                            } else {
+                                Notifications.show("Upload failed: " + (uploadResponse.error || "Unknown error"), "error");
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        function updateSectionImageDisplay(masterAsset, variant) {
+            let assetId = masterAsset && masterAsset.id ? masterAsset.id : '';
+            let variantId = variant && variant.id ? variant.id : '';
+            let previewUrl = getPreviewUrlForAsset(masterAsset, variant);
+            let hasImage = !!assetId;
+            $sectionElement.find('.section-asset-id-input').val(assetId);
+            $sectionElement.find('.section-variant-id-input').val(variantId);
+            $sectionElement.find('.section-image-preview').attr('src', previewUrl);
+            let displayTitle = '';
+            if (masterAsset && (masterAsset.admin_title || masterAsset.title)) {
+                displayTitle = masterAsset.admin_title || masterAsset.title;
+            } else if (assetId) {
+                displayTitle = `Image ${assetId}`;
+            }
+            $sectionElement.find('.section-image-info').text(displayTitle || 'No image selected.');
+            if (hasImage) {
+                $dropzone.removeClass('no-image').addClass('has-image');
+                $sectionElement.find('.section-image-actions').show();
+            } else {
+                $dropzone.addClass('no-image').removeClass('has-image');
+                $sectionElement.find('.section-image-actions').hide();
+                $sectionElement.find('.section-image-preview').attr('src', placeholderImgPathGlobal);
+                $sectionElement.find('.section-image-info').text('Click, Drop, or Paste Image');
+            }
+            $('#article-form').trigger('input');
+        }
     }
 
-    // --- GALLERY SECTION INTERACTIONS (Similar adaptations needed) ---
+    // --- GALLERY SECTION INTERACTIONS ---
     function setupGallerySectionInteractions($sectionElement) {
-        // ... (Adapt dropzone click to call openMediaPickerForArticleContext({ directlyTriggerUpload: true, allowMultipleForGallery: true }); ) ...
-        // ... (Setup droppable for gallery sections) ...
+        const $dropzone = $sectionElement.find('.dropzone-gallery');
+        if (!$dropzone.length) return;
+
+        // Initialize droppable if not already
+        if (!$dropzone.data('droppable-initialized')) {
+            $dropzone.droppable({
+                accept: '.global-media-item, .polaroid-style-preview',
+                hoverClass: 'dropzone-hover-active',
+                drop: function(event, ui) {
+                    const $draggedItem = ui.draggable;
+                    const draggedAssetData = $draggedItem.data('asset-data') || $(ui.helper).data('asset-data');
+                    console.log("[AddArticle] Gallery section received drop with asset data:", draggedAssetData);
+                    
+                    if (draggedAssetData && draggedAssetData.id) {
+                        window.currentArticleImageTarget = {
+                            type: 'galleryImageAddition',
+                            instanceId: $sectionElement.data('section-instance-id'),
+                            $targetElement: $sectionElement,
+                            updateCallback: function(finalMasterAsset, finalVariantIfAny) {
+                                if (finalMasterAsset && finalMasterAsset.id) {
+                                    addImageToGalleryDataModel(this.instanceId, finalMasterAsset, finalVariantIfAny);
+                                }
+                            }
+                        };
+                        fetchAssetAndOpenUIE(draggedAssetData.id, draggedAssetData.variant_id || null, window.currentArticleImageTarget);
+                    }
+                }
+            }).data('droppable-initialized', true);
+        }
+        
+        $dropzone.off('click.gallery').on('click.gallery', function(e) {
+            window.currentArticleImageTarget = {
+                type: 'galleryImageAddition',
+                instanceId: $sectionElement.data('section-instance-id'),
+                $targetElement: $sectionElement,
+                updateCallback: function(finalMasterAsset, finalVariantIfAny) {
+                    if (finalMasterAsset && finalMasterAsset.id) {
+                        addImageToGalleryDataModel(this.instanceId, finalMasterAsset, finalVariantIfAny);
+                    }
+                }
+            };
+            openMediaPickerForArticleContext({ directlyTriggerUpload: true, allowMultipleForGallery: true });
+        });
+
+        if (typeof $().droppable === 'function') {
+            $dropzone.droppable({
+                accept: ".global-media-item, .polaroid-style-preview, *",
+                hoverClass: "dropzone-hover-active",
+                drop: function(event, ui) {
+                    // If dropped from media library/staging (jQuery UI draggable)
+                    const $draggedItem = ui.draggable;
+                    const draggedAssetData = $draggedItem && ($draggedItem.data('asset-data') || $draggedItem.data('dragged-asset-data'));
+                    if (draggedAssetData && draggedAssetData.id) {
+                        window.currentArticleImageTarget = {
+                            type: 'galleryImageAddition',
+                            instanceId: $sectionElement.data('section-instance-id'),
+                            $targetElement: $sectionElement,
+                            updateCallback: function(finalMasterAsset, finalVariantIfAny) {
+                                if (finalMasterAsset && finalMasterAsset.id) {
+                                    addImageToGalleryDataModel(this.instanceId, finalMasterAsset, finalVariantIfAny);
+                                }
+                            }
+                        };
+                        fetchAssetAndOpenUIE(draggedAssetData.id, draggedAssetData.variant_id || null, window.currentArticleImageTarget);
+                        return;
+                    }
+                    // If dropped from file explorer (native files)
+                    const files = event.originalEvent && event.originalEvent.dataTransfer && event.originalEvent.dataTransfer.files;
+                    if (files && files.length > 0) {
+                        window.currentArticleImageTarget = {
+                            type: 'galleryImageAddition',
+                            instanceId: $sectionElement.data('section-instance-id'),
+                            $targetElement: $sectionElement,
+                            updateCallback: function(finalMasterAsset, finalVariantIfAny) {
+                                if (finalMasterAsset && finalMasterAsset.id) {
+                                    addImageToGalleryDataModel(this.instanceId, finalMasterAsset, finalVariantIfAny);
+                                }
+                            }
+                        };
+                        // Process each file through UIE, sequentially
+                        let idx = 0;
+                        function processNext() {
+                            if (idx >= files.length) return;
+                            MediaUpload.processSingleFileForDrop(files[idx], function(uploadResponse) {
+                                if (uploadResponse && uploadResponse.success && uploadResponse.media) {
+                                    openUIEForArticleContextGlobal(uploadResponse.media, window.currentArticleImageTarget, {context: 'articleGalleryItemAdd', contextualUseButtonText: 'Add to Gallery & Use'});
+                                    idx++;
+                                    // UIE will call updateCallback after each, so we can chain or let user finish each before next
+                                    // For now, let user finish each UIE before next (sequential, not auto)
+                                } else {
+                                    Notifications.show("Upload failed: " + (uploadResponse.error || "Unknown error"), "error");
+                                    idx++;
+                                    processNext();
+                                }
+                            });
+                        }
+                        processNext();
+                    }
+                }
+            });
+        }
     }
 
     // --- GLOBAL HANDLERS, HELPERS, GALLERY MGMT, EVENT LISTENERS (largely from v1.7.4) ---
@@ -313,19 +587,58 @@ $(document).ready(function() {
     function updateGalleryItemDataModel(galleryInstanceId, itemIndex, masterAsset, variantIfAny) { /* ... (from v1.7.2, then call MediaLibrary.loadMedia();) ... */ }
     function renderGalleryPreviewItems($gallerySection, imagesArray) { /* ... (from v1.7.2) ... */ }
     
+    // On section added, initialize interactions for new sections
     $(document).on("section:added", function(event, $sectionElem, sectionId, defaults, sectionInstanceId) {
         if (typeof Sections === 'undefined') { console.error("Sections module not defined!"); return; }
-        console.log(`[AddArticle] Section added (event handler): Type ${sectionId}, Instance ID: ${sectionInstanceId}`);
         if (parseInt(sectionId) === Sections.IMAGE_SECTION) { setupImageSectionInteractions($sectionElem); $sectionElem.data('interactions-initialized', true); }
         else if (parseInt(sectionId) === Sections.GALLERY_SECTION) { 
             setupGallerySectionInteractions($sectionElem);
-            // ... (gallery init from v1.7.2) ...
             $sectionElem.data('interactions-initialized', true);
         }
-        // ... (Pros/Cons, Rating init from v1.7.2) ...
+        // ...existing code...
     });
-    // ... (Pros/Cons, Rating, Gallery caption change handlers from v1.7.2) ...
-    $('#article-form').on('submit', function(e) { /* ... (marshalling logic from v1.7.2) ... */ });
-    $('#sections-container .modular-section').each(function() { /* ... (initial setup for existing sections from v1.7.2) ... */ });
 
+    // On page load, initialize interactions for existing sections
+    $('#sections-container .modular-section').each(function() {
+        const $sectionElem = $(this);
+        const sectionType = $sectionElem.data('type');
+        if (parseInt(sectionType) === Sections.IMAGE_SECTION) { setupImageSectionInteractions($sectionElem); }
+        else if (parseInt(sectionType) === Sections.GALLERY_SECTION) { setupGallerySectionInteractions($sectionElem); }
+        // ...existing code...
+    });
+
+// --- GLOBAL CLIPBOARD PASTE HANDLER (only for global media library) ---
+$(document).off('paste.addarticle').on('paste.addarticle', function(e) {
+    // Only handle paste if focus is NOT in an input/textarea and global media library is visible
+    if ($(e.target).is('input, textarea, [contenteditable]')) return;
+    if (!$('#global-media').is(':visible')) return;
+    let items = (e.originalEvent || e).clipboardData.items;
+    let foundImage = false;
+    for (let i = 0; i < items.length; i++) {
+        let item = items[i];
+        if (item.kind === 'file' && item.type.indexOf('image') !== -1) {
+            foundImage = true;
+            let file = item.getAsFile();
+            if (file) {
+                Notifications.show("Uploading pasted image to Global Media Library...", "info");
+                MediaUpload.processSingleFileForDrop(file, function(uploadResponse) {
+                    if (uploadResponse && uploadResponse.success && uploadResponse.media) {
+                        if (window.MediaLibrary && typeof MediaLibrary.loadMedia === "function") {
+                            MediaLibrary.loadMedia();
+                        }
+                        Notifications.show("Image added to Global Media Library.", "success");
+                    } else {
+                        Notifications.show("Upload failed: " + (uploadResponse.error || "Unknown error"), "error");
+                    }
+                });
+            }
+        }
+    }
+    if (foundImage) e.preventDefault();
+});
+
+// --- SECTION TYPE LOGIC POLISH ---
+// Ensure all section types (text, image, gallery, quote, pros/cons, rating, video) are initialized and rendered with correct classes and controls.
+// For each section type, use .modular-section and UIE-inspired headers/fields as in the CSS above.
+// ...existing code...
 });

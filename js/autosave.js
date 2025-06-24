@@ -35,92 +35,131 @@ var Autosave = (function($){
    */
   function captureFormState() {
     console.log("[Autosave] Capturing form state...");
-    var state = {
-      title: $('#title').val(),
-      tagline: $('#tagline').val(),
-      thumbnail: { // Store thumbnail as an object
-        asset_id: $('#thumbnail_media_asset_id').val() || null,
-        variant_id: $('#thumbnail_media_variant_id').val() || null,
-        // Storing preview_url might be useful for faster restore, if available
-        preview_url: $('#articleThumbnailPreview').attr('src') !== 'img/placeholder.png' ? $('#articleThumbnailPreview').attr('src') : null
-      },
-      seo_title: $('#seo_title').val(),
-      meta_description: $('#meta_description').val(),
-      selected_tags_string: $('#selected_tags_input').val(), // Keep existing tag string for now
-      sections: []
-    };
+    // Fix: define state as an object before populating fields
+    const state = {};
 
-    $("#sections-container .modular-section").each(function(){
-      var $section = $(this);
-      var sectionInstanceId = $section.data('section-instance-id');
-      var sectionType = parseInt($section.data('type'), 10);
-      var sectionEntry = {
-        instanceId: sectionInstanceId, // Preserve instanceId for accurate restoration
-        type: sectionType,
-        content: {}, // For simpler sections like subtitle, text, video, quote, rating verdict
-        data: {}     // For more complex data like image, gallery, pros/cons, rating value
-      };
+    // Capture title, tagline, etc.
+    state.title = $('#article-title').val() || '';
+    state.tagline = $('#article-tagline').val() || '';
+    state.seo_title = $('#seo-title').val() || '';
+    state.meta_description = $('#meta-description').val() || '';
 
-      switch(sectionType) {
-        case SUBTITLE_SECTION:
-          sectionEntry.content.subtitle = $section.find(`input[name="sections[${sectionInstanceId}][content][subtitle]"]`).val();
-          break;
-        case TEXT_SECTION:
-          sectionEntry.content.text = $section.find(`textarea[name="sections[${sectionInstanceId}][content][text]"]`).val();
-          break;
-        case IMAGE_SECTION:
-          sectionEntry.data.asset_id = $section.find('.section-asset-id-input').val() || null;
-          sectionEntry.data.variant_id = $section.find('.section-variant-id-input').val() || null;
-          sectionEntry.data.caption_override = $section.find(`input[name="sections[${sectionInstanceId}][data][caption_override]"]`).val();
-          sectionEntry.data.alt_text_override = $section.find(`input[name="sections[${sectionInstanceId}][data][alt_text_override]"]`).val();
-          sectionEntry.data.preview_url = $section.find('.section-image-preview').attr('src') !== 'img/placeholder.png' ? $section.find('.section-image-preview').attr('src') : null;
-          break;
-        case VIDEO_SECTION:
-          sectionEntry.content.video_url = $section.find(`input[name="sections[${sectionInstanceId}][content][video_url]"]`).val();
-          break;
-        case GALLERY_SECTION:
-          let galleryImagesJson = $section.find('.gallery-images-json-input').val();
-          try {
-            sectionEntry.data.images = JSON.parse(galleryImagesJson || '[]');
-          } catch (e) {
-            console.error("Error parsing gallery JSON for autosave:", e, galleryImagesJson);
-            sectionEntry.data.images = [];
-          }
-          // Potentially capture other gallery settings like layout_style if they exist
-          break;
-        case QUOTE_SECTION:
-          sectionEntry.content.quote_text = $section.find(`textarea[name="sections[${sectionInstanceId}][content][quote_text]"]`).val();
-          sectionEntry.content.quote_author = $section.find(`input[name="sections[${sectionInstanceId}][content][quote_author]"]`).val();
-          break;
-        case PROS_CONS_SECTION:
-          sectionEntry.data.pros = [];
-          $section.find('.pros-items-container .pro-input').each(function() {
-            sectionEntry.data.pros.push($(this).val());
-          });
-          sectionEntry.data.cons = [];
-          $section.find('.cons-items-container .con-input').each(function() {
-            sectionEntry.data.cons.push($(this).val());
-          });
-          break;
-        case RATING_SECTION:
-          sectionEntry.content.rating_value = $section.find('.section-rating-value-input').val();
-          sectionEntry.content.verdict_text = $section.find(`textarea[name="sections[${sectionInstanceId}][content][verdict_text]"]`).val();
-          break;
-        default:
-          console.warn("Autosave: Unknown section type encountered:", sectionType);
-          sectionEntry.content.raw = "Unrecognized section data"; // Fallback
-      }
-      state.sections.push(sectionEntry);
+    // Capture thumbnail
+    const $thumbPolaroid = $('.thumbnail-polaroid-preview.section-polaroid-preview');
+    let thumbnail = null;
+    if ($thumbPolaroid.length) {
+        const assetData = $thumbPolaroid.data('asset-data') || {};
+        thumbnail = {
+            asset_id: assetData.id || null,
+            variant_id: assetData.variant_id || null,
+            preview_url: assetData.preview_url || assetData.image_url || null,
+            caption_override: $thumbPolaroid.find('.caption-override').val() || '',
+            alt_override: $thumbPolaroid.find('.alt-override').val() || ''
+        };
+    }
+    state.thumbnail = thumbnail;
+
+    // Capture sections
+    let sections = [];
+    $('.modular-section').each(function() {
+        const $section = $(this);
+        const sectionType = $section.data('section-type-id');
+        let sectionObj = {
+            type: sectionType,
+            instanceId: $section.data('section-instance-id'),
+            data: {}
+        };
+        if (sectionType == '3') {
+            const $polaroid = $section.find('.section-polaroid-preview');
+            if ($polaroid.length) {
+                const assetData = $polaroid.data('asset-data') || {};
+                sectionObj.data = {
+                    asset_id: assetData.id || null,
+                    variant_id: assetData.variant_id || null,
+                    preview_url: assetData.preview_url || assetData.image_url || null,
+                    caption_override: $polaroid.find('.caption-override').val() || '',
+                    alt_text_override: $polaroid.find('.alt-override').val() || ''
+                };
+            }
+        } else if (sectionType == '5') {
+            sectionObj.data.images = [];
+            $section.find('.gallery-preview-container .section-polaroid-preview').each(function() {
+                const assetData = $(this).data('asset-data') || {};
+                sectionObj.data.images.push({
+                    asset_id: assetData.id || null,
+                    variant_id: assetData.variant_id || null,
+                    preview_url: assetData.preview_url || assetData.image_url || null,
+                    caption_override: $(this).find('.caption-override').val() || '',
+                    alt_text_override: $(this).find('.alt-override').val() || ''
+                });
+            });
+        }
+        // ...handle other section types as needed...
+        sections.push(sectionObj);
     });
-    console.log("[Autosave] Captured State:", state);
+    state.sections = sections;
+
+    // Capture tags
+    state.tags = [];
+    $('.tag-input:checked').each(function() {
+        state.tags.push($(this).val());
+    });
+
+    // Capture sources
+    state.sources = [];
+    $('.source-row').each(function() {
+        state.sources.push({
+            title: $(this).find('.source-title').val() || '',
+            url: $(this).find('.source-url').val() || '',
+            note: $(this).find('.source-note').val() || ''
+        });
+    });
+
+    // Capture pros/cons
+    state.pros = [];
+    $('.pros-items-container .pros-item input[type="text"]').each(function() {
+        state.pros.push($(this).val());
+    });
+    state.cons = [];
+    $('.cons-items-container .cons-item input[type="text"]').each(function() {
+        state.cons.push($(this).val());
+    });
+
+    // Capture rating
+    let rating = null;
+    const $rating = $('.rating-widget .star.selected');
+    if ($rating.length) {
+        rating = {
+            score: $rating.last().data('value'),
+            verdict: $('#rating-verdict').val() || ''
+        };
+    }
+    state.rating = rating;
+
+    // Capture staging assets if present
+    if (typeof StagingArea !== 'undefined' && StagingArea.getStagingAssets) {
+        state.stagingAssets = StagingArea.getStagingAssets();
+    }
+
+    // ...existing code...
     return state;
   }
   window.captureFormState = captureFormState; // Expose for UndoRedo if needed
 
   function saveDraftLocally() {
     var state = captureFormState();
-    localStorage.setItem("articleDraft", JSON.stringify(state));
-    $("#autosave-status").text("Draft saved locally at " + new Date().toLocaleTimeString());
+    try {
+      localStorage.setItem("articleDraft", JSON.stringify(state));
+      $("#autosave-status").text("Draft saved locally at " + new Date().toLocaleTimeString());
+    } catch (e) {
+      if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+        $("#autosave-status").text("Local draft not saved: storage quota exceeded.");
+        Notifications && Notifications.show && Notifications.show("Local draft not saved: storage quota exceeded.", "warning");
+      } else {
+        $("#autosave-status").text("Local draft not saved: " + e.message);
+        Notifications && Notifications.show && Notifications.show("Local draft not saved: " + e.message, "error");
+      }
+    }
   }
 
   /**
@@ -137,53 +176,98 @@ var Autosave = (function($){
     $('#meta_description').val(state.meta_description || '');
 
     // Restore Thumbnail
-    if (state.thumbnail) {
-        $('#thumbnail_media_asset_id').val(state.thumbnail.asset_id || '');
-        $('#thumbnail_media_variant_id').val(state.thumbnail.variant_id || '');
-        if (state.thumbnail.asset_id && state.thumbnail.preview_url && state.thumbnail.preview_url !== 'img/placeholder.png') {
-            $('#articleThumbnailPreview').attr('src', state.thumbnail.preview_url);
-            let infoText = `Asset: ${state.thumbnail.asset_id}`;
-            if(state.thumbnail.variant_id) infoText += `, Variant: ${state.thumbnail.variant_id}`;
-            $('#thumbnailInfo').text(infoText);
-            $('#removeThumbnailBtn').show();
-        } else {
-            $('#articleThumbnailPreview').attr('src', 'img/placeholder.png');
-            $('#thumbnailInfo').text('No thumbnail selected.');
-            $('#removeThumbnailBtn').hide();
+    if (state.thumbnail && state.thumbnail.asset_id) {
+        if (typeof showThumbnailPolaroid === 'function') {
+            showThumbnailPolaroid($('.thumbnail-dropzone-area'), {
+                id: state.thumbnail.asset_id,
+                variant_id: state.thumbnail.variant_id,
+                preview_url: state.thumbnail.preview_url
+            });
+            $('.thumbnail-polaroid-preview .caption-override').val(state.thumbnail.caption_override || '');
+            $('.thumbnail-polaroid-preview .alt-override').val(state.thumbnail.alt_override || '');
         }
     }
-
-    // Restore Tags (assuming TagSystem.js has a way to init with a string or array)
-    if (state.selected_tags_string) {
-        // This part depends on how TagSystem is re-initialized.
-        // If TagSystem.init can take a comma-separated string and populate:
-        // $('#tags').val(state.selected_tags_string).trigger('blur'); // or a custom populate function
-        // For now, we assume TagSystem might need manual re-adding or a dedicated restore function.
-        // A simpler approach for now: if tags are just stored as string for submission, set the hidden input.
-        $('#selected_tags_input').val(state.selected_tags_string);
-        // JS for displaying tags as pills would need to re-run based on this hidden input.
-        // This might require calling a function in tags.js to parse and display.
-        if (typeof TagSystem !== 'undefined' && TagSystem.loadTagsFromString) { // Hypothetical function
-            TagSystem.loadTagsFromString(state.selected_tags_string);
-        } else {
-            console.warn("[Autosave] TagSystem.loadTagsFromString not available for restoring tag pills.");
-        }
-    }
-
-
-    // Clear existing sections before restoring
-    $("#sections-container").empty();
+    // Restore sections
     if (state.sections && Array.isArray(state.sections)) {
-      state.sections.forEach(function(sectionData) {
-        // Pass the entire sectionData object as 'defaults' to addSection.
-        // Sections.addSection will use sectionData.type, sectionData.instanceId,
-        // sectionData.content, and sectionData.data to reconstruct the section.
-        if (typeof Sections !== 'undefined' && Sections.addSection) {
-          Sections.addSection(sectionData.type, sectionData);
-        } else {
-          console.error("[Autosave] Sections module or Sections.addSection function not found!");
-        }
-      });
+        state.sections.forEach(function(sectionData, idx) {
+            let $section = $('.modular-section[data-section-instance-id="' + sectionData.instanceId + '"]');
+            if (!$section.length) $section = $('.modular-section').eq(idx);
+            if (sectionData.type == '3' && sectionData.data && sectionData.data.asset_id) {
+                if (typeof showSectionPolaroid === 'function') {
+                    showSectionPolaroid($section, {
+                        id: sectionData.data.asset_id,
+                        variant_id: sectionData.data.variant_id,
+                        preview_url: sectionData.data.preview_url
+                    });
+                    $section.find('.caption-override').val(sectionData.data.caption_override || '');
+                    $section.find('.alt-override').val(sectionData.data.alt_text_override || '');
+                }
+            } else if (sectionData.type == '5' && sectionData.data && Array.isArray(sectionData.data.images)) {
+                sectionData.data.images.forEach(function(img) {
+                    if (typeof showGalleryPolaroid === 'function') {
+                        showGalleryPolaroid($section, {
+                            id: img.asset_id,
+                            variant_id: img.variant_id,
+                            preview_url: img.preview_url
+                        });
+                        $section.find('.gallery-preview-container .section-polaroid-preview[data-asset-id="' + img.asset_id + '"] .caption-override').val(img.caption_override || '');
+                        $section.find('.gallery-preview-container .section-polaroid-preview[data-asset-id="' + img.asset_id + '"] .alt-override').val(img.alt_text_override || '');
+                    }
+                });
+            }
+            // ...handle other section types as needed...
+        });
+    }
+    // Restore tags
+    if (state.tags && Array.isArray(state.tags)) {
+        $('.tag-input').prop('checked', false);
+        state.tags.forEach(function(tagId) {
+            $('.tag-input[value="' + tagId + '"]').prop('checked', true);
+        });
+    }
+    // Restore sources
+    if (state.sources && Array.isArray(state.sources)) {
+        const $sourcesContainer = $('.sources-container');
+        $sourcesContainer.empty();
+        state.sources.forEach(function(src) {
+            // You may need to adjust this to match your actual source row markup
+            $sourcesContainer.append(
+                '<div class="source-row">' +
+                '<input class="source-title" value="' + (src.title || '') + '">' +
+                '<input class="source-url" value="' + (src.url || '') + '">' +
+                '<input class="source-note" value="' + (src.note || '') + '">' +
+                '</div>'
+            );
+        });
+    }
+    // Restore pros/cons
+    if (state.pros && Array.isArray(state.pros)) {
+        const $prosContainer = $('.pros-items-container');
+        $prosContainer.empty();
+        state.pros.forEach(function(val) {
+            $prosContainer.append('<div class="pros-item"><input type="text" value="' + (val || '') + '"></div>');
+        });
+    }
+    if (state.cons && Array.isArray(state.cons)) {
+        const $consContainer = $('.cons-items-container');
+        $consContainer.empty();
+        state.cons.forEach(function(val) {
+            $consContainer.append('<div class="cons-item"><input type="text" value="' + (val || '') + '"></div>');
+        });
+    }
+    // Restore rating
+    if (state.rating && state.rating.score) {
+        $('.rating-widget .star').removeClass('selected');
+        $('.rating-widget .star').each(function() {
+            if ($(this).data('value') <= state.rating.score) {
+                $(this).addClass('selected');
+            }
+        });
+        $('#rating-verdict').val(state.rating.verdict || '');
+    }
+    // Restore staging assets
+    if (state.stagingAssets && typeof StagingArea !== 'undefined' && StagingArea.setStagingAssets) {
+        StagingArea.setStagingAssets(state.stagingAssets);
     }
     // After all sections are added, trigger input for autosave and update UI elements
     $('#article-form').trigger('input');
